@@ -1,41 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>DEAF Chat + Video</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <title>DEAF Chat + Video + Files</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
 
 <div class="container">
-  <div class="card">
-    <h1>DEAF Chat & Video</h1>
+    <div class="card">
+        <h1>DEAF Chat & Video</h1>
 
-    <!-- LOGIN -->
-    <div id="loginBox">
-      <input id="username" placeholder="Enter username">
-      <input id="room" placeholder="Enter Room ID (e.g. room123)">
-      <button type="button" class="primary-btn" onclick="login()">Join Room</button>
+        <!-- LOGIN -->
+        <div id="loginBox">
+            <input id="username" placeholder="Enter username">
+            <input id="room" placeholder="Enter Room ID">
+            <button type="button" class="primary-btn" onclick="login()">Join Room</button>
+        </div>
+
+        <!-- CHAT & VIDEO -->
+        <div id="chatBox" style="display:none;">
+            <p>Logged in as: <span id="userLabel"></span></p>
+
+            <div id="messages"></div>
+            <input id="messageInput" placeholder="Type message">
+            <button type="button" class="secondary-btn" onclick="sendMessage()">Send</button>
+
+            <input type="file" id="fileInput">
+            <button type="button" class="secondary-btn" onclick="sendFile()">Send File</button>
+
+            <div class="video-area">
+                <video id="localVideo" autoplay muted></video>
+                <video id="remoteVideo" autoplay></video>
+            </div>
+
+            <button type="button" class="secondary-btn" onclick="startCall()">Start Video Call</button>
+            <button type="button" class="danger-btn" onclick="endCall()">End Call</button>
+        </div>
+
     </div>
-
-    <!-- CHAT & VIDEO -->
-    <div id="chatBox" style="display:none;">
-      <p>Logged in as: <span id="userLabel"></span></p>
-
-      <div id="messages"></div>
-      <input id="messageInput" placeholder="Type message">
-      <button type="button" class="secondary-btn" onclick="sendMessage()">Send</button>
-
-      <div class="video-area">
-        <video id="localVideo" autoplay muted></video>
-        <video id="remoteVideo" autoplay></video>
-      </div>
-
-      <button type="button" class="secondary-btn" onclick="startCall()">Start Video Call</button>
-      <button type="button" class="danger-btn" onclick="endCall()">End Call</button>
-    </div>
-
-  </div>
 </div>
 
 <script src="script.js"></script>

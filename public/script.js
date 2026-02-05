@@ -1,21 +1,33 @@
+// Connect to your Render-deployed Socket.IO server
 const socket = io("https://deaf-chat-app.onrender.com");
 
 let username = "";
+let roomId = "";
 let pc;
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 
-// ======= LOGIN =======
+// ======= LOGIN / JOIN ROOM =======
 function login() {
     username = document.getElementById("username").value.trim();
-    if (!username) { alert("Enter name"); return; }
+    roomId = document.getElementById("room").value.trim();
+
+    if (!username || !roomId) {
+        alert("Enter username and room");
+        return;
+    }
+
+    // Join room on server
+    socket.emit("join-room", roomId);
 
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("chatBox").style.display = "block";
     document.getElementById("userLabel").innerText = username;
+
+    addMessage(`You joined room: ${roomId}`);
 }
 
-// ======= ENCRYPTION =======
+// ======= ENCRYPTION (client-side) =======
 function simpleEncrypt(text) { return btoa(text); }
 function simpleDecrypt(text) { return atob(text); }
 
@@ -24,15 +36,16 @@ function sendMessage() {
     let msg = document.getElementById("messageInput").value.trim();
     if (!msg) return;
 
-    let encryptedMsg = simpleEncrypt(msg);
+    let encrypted = simpleEncrypt(msg);
     addMessage(`You: ${msg}`);
-    socket.emit("chat-message", { user: username, message: encryptedMsg });
+
+    socket.emit("private-message", { roomId, message: encrypted, username });
     document.getElementById("messageInput").value = "";
 }
 
-socket.on("chat-message", data => {
-    let decryptedMsg = simpleDecrypt(data.message);
-    addMessage(`${data.user}: ${decryptedMsg}`);
+// Listen for messages from other users in the same room
+socket.on("private-message", data => {
+    addMessage(`${data.username}: ${simpleDecrypt(data.message)}`);
 });
 
 function addMessage(text) {
@@ -51,11 +64,13 @@ async function startCall() {
     stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
     pc.ontrack = event => { remoteVideo.srcObject = event.streams[0]; };
-    pc.onicecandidate = event => { if (event.candidate) socket.emit("candidate", event.candidate); };
+    pc.onicecandidate = event => {
+        if (event.candidate) socket.emit("candidate", { roomId, candidate: event.candidate });
+    };
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    socket.emit("offer", offer);
+    socket.emit("offer", { roomId, offer });
 }
 
 socket.on("offer", async offer => {
@@ -66,12 +81,14 @@ socket.on("offer", async offer => {
     stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
     pc.ontrack = event => { remoteVideo.srcObject = event.streams[0]; };
-    pc.onicecandidate = event => { if (event.candidate) socket.emit("candidate", event.candidate); };
+    pc.onicecandidate = event => {
+        if (event.candidate) socket.emit("candidate", { roomId, candidate: event.candidate });
+    };
 
     await pc.setRemoteDescription(offer);
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    socket.emit("answer", answer);
+    socket.emit("answer", { roomId, answer });
 });
 
 socket.on("answer", async answer => { await pc.setRemoteDescription(answer); });

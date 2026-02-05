@@ -3,6 +3,8 @@ const socket = io("https://deaf-chat-app.onrender.com");
 let username = "";
 let room = "";
 let pc = null;
+let localStream = null;
+let gestureCamera = null;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
@@ -92,7 +94,10 @@ socket.on("file-transfer", (data) => {
     document.getElementById("messages").appendChild(link);
 });
 
-// ---------- WEBRTC VIDEO CALL ----------
+// =====================
+// ✅ FIXED WEBRTC VIDEO
+// =====================
+
 async function startCall() {
     pc = new RTCPeerConnection({
         iceServers: [
@@ -101,12 +106,16 @@ async function startCall() {
         ]
     });
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    localVideo.srcObject = stream;
-    stream.getTracks().forEach(t => pc.addTrack(t, stream));
+    // 👉 IMPORTANT FIX: ab video tabhi aayegi jab call start ho
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
+    localVideo.style.display = "block";
+
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
     pc.ontrack = (e) => {
         remoteVideo.srcObject = e.streams[0];
+        remoteVideo.style.display = "block";
     };
 
     pc.onicecandidate = (e) => {
@@ -118,6 +127,9 @@ async function startCall() {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     socket.emit("offer", { roomId: room, offer });
+
+    // 👉 START GESTURE CAMERA ONLY AFTER CALL STARTS
+    startGestureDetection();
 }
 
 socket.on("offer", async (offer) => {
@@ -128,12 +140,15 @@ socket.on("offer", async (offer) => {
         ]
     });
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    localVideo.srcObject = stream;
-    stream.getTracks().forEach(t => pc.addTrack(t, stream));
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
+    localVideo.style.display = "block";
+
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
     pc.ontrack = (e) => {
         remoteVideo.srcObject = e.streams[0];
+        remoteVideo.style.display = "block";
     };
 
     pc.onicecandidate = (e) => {
@@ -146,6 +161,8 @@ socket.on("offer", async (offer) => {
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     socket.emit("answer", { roomId: room, answer });
+
+    startGestureDetection();
 });
 
 socket.on("answer", async (answer) => {
@@ -156,15 +173,31 @@ socket.on("candidate", async (candidate) => {
     await pc.addIceCandidate(new RTCIceCandidate(candidate));
 });
 
+// 👉 FIX: End Call par video band ho jayegi
 function endCall() {
     if (pc) {
         pc.close();
         pc = null;
-        alert("Call ended");
     }
+
+    if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+    }
+
+    localVideo.srcObject = null;
+    remoteVideo.srcObject = null;
+    localVideo.style.display = "none";
+    remoteVideo.style.display = "none";
+
+    stopGestureDetection();
+    alert("Call ended");
 }
 
-// ---------- HAND GESTURE DETECTION ----------
+// =====================
+// ✅ FIXED HAND GESTURE
+// =====================
+
 const hands = new Hands({
     locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
 });
@@ -187,7 +220,6 @@ hands.onResults(results => {
 });
 
 function detectGesture(landmarks) {
-    // VERY SIMPLE RULES (expandable)
     const tip = landmarks[8];   // index tip
     const base = landmarks[5];  // index base
 
@@ -197,14 +229,26 @@ function detectGesture(landmarks) {
     return null;
 }
 
-const camera = new Camera(localVideo, {
-    onFrame: async () => {
-        await hands.send({ image: localVideo });
-    },
-    width: 640,
-    height: 480
-});
-camera.start();
+function startGestureDetection() {
+    if (gestureCamera) return;
+
+    gestureCamera = new Camera(localVideo, {
+        onFrame: async () => {
+            await hands.send({ image: localVideo });
+        },
+        width: 640,
+        height: 480
+    });
+
+    gestureCamera.start();
+}
+
+function stopGestureDetection() {
+    if (gestureCamera) {
+        gestureCamera.stop();
+        gestureCamera = null;
+    }
+}
 
 // Receive gesture from other user
 socket.on("gesture", (data) => {

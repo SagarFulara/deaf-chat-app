@@ -16,14 +16,12 @@
 
     <h1>DEAF Chat & Video</h1>
 
-    <!-- LOGIN -->
     <div id="loginBox">
       <input id="username" placeholder="Enter your name">
       <input id="room" placeholder="Enter Room ID (e.g. room123)">
       <button class="primary-btn" onclick="login()">Join Room</button>
     </div>
 
-    <!-- MAIN APP -->
     <div id="chatBox" style="display:none;">
 
       <p>Logged in as: <span id="userLabel"></span></p>
@@ -37,9 +35,12 @@
       <button class="secondary-btn" onclick="sendFile()">Send File</button>
 
       <div class="video-area">
-        <video id="localVideo" autoplay muted></video>
-        <video id="remoteVideo" autoplay></video>
+        <video id="localVideo" autoplay muted style="display:none"></video>
+        <video id="remoteVideo" autoplay style="display:none"></video>
       </div>
+
+      <!-- 👇 NEW: Hidden video ONLY for gestures -->
+      <video id="handFeed" autoplay muted hidden></video>
 
       <div id="gestureCaption" class="gesture-box"></div>
 

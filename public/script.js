@@ -4,10 +4,12 @@ let username = "";
 let room = "";
 let pc = null;
 let localStream = null;
-let gestureRunning = false;
+let handStream = null;
+let gestureCamera = null;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
+const handVideo = document.getElementById("handFeed");   // 🔥 NEW
 const gestureBox = document.getElementById("gestureCaption");
 
 // ---------- LOGIN ----------
@@ -27,33 +29,23 @@ function login() {
     socket.emit("join-room", { roomId: room, username });
 }
 
-// ---------- SIMPLE ENCRYPTION ----------
-function simpleEncrypt(text) {
-    return btoa(text);
-}
-function simpleDecrypt(text) {
-    return atob(text);
-}
-
 // ---------- CHAT ----------
 function sendMessage() {
     let msg = document.getElementById("messageInput").value;
     if (!msg) return;
 
-    let encrypted = simpleEncrypt(msg);
     addMessage(`You: ${msg}`);
 
     socket.emit("private-message", {
         roomId: room,
-        message: encrypted
+        message: btoa(msg)
     });
 
     document.getElementById("messageInput").value = "";
 }
 
 socket.on("private-message", (data) => {
-    let decrypted = simpleDecrypt(data.message);
-    addMessage(`${data.username}: ${decrypted}`);
+    addMessage(`${data.username}: ${atob(data.message)}`);
 });
 
 function addMessage(text) {
@@ -95,7 +87,7 @@ socket.on("file-transfer", (data) => {
 });
 
 // =====================
-// ✅ CLEAN WEBRTC VIDEO (NO CONFLICT)
+// ✅ FIXED WEBRTC VIDEO
 // =====================
 
 async function startCall() {
@@ -106,6 +98,7 @@ async function startCall() {
         ]
     });
 
+    // MAIN VIDEO STREAM (for call)
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
     localVideo.style.display = "block";
@@ -127,7 +120,7 @@ async function startCall() {
     await pc.setLocalDescription(offer);
     socket.emit("offer", { roomId: room, offer });
 
-    // Start gestures AFTER video starts
+    // 🔥 START GESTURES (separate camera)
     startGestureDetection();
 }
 
@@ -183,62 +176,70 @@ function endCall() {
         localStream = null;
     }
 
+    if (handStream) {
+        handStream.getTracks().forEach(t => t.stop());
+        handStream = null;
+    }
+
     localVideo.srcObject = null;
     remoteVideo.srcObject = null;
+    handVideo.srcObject = null;
+
     localVideo.style.display = "none";
     remoteVideo.style.display = "none";
 
-    stopGestureDetection();
+    if (gestureCamera) {
+        gestureCamera.stop();
+        gestureCamera = null;
+    }
+
     alert("Call ended");
 }
 
 // =====================
-// ✅ SIMPLE & WORKING GESTURE (NO CAMERA CONFLICT)
+// ✅ WORKING HAND GESTURES (PROPER FIX)
 // =====================
 
-function startGestureDetection() {
-    if (gestureRunning) return;
-    gestureRunning = true;
+const hands = new Hands({
+    locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
 
-    const hands = new Hands({
-        locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-    });
+hands.setOptions({
+    maxNumHands: 1,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence: 0.7
+});
 
-    hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.7
-    });
+hands.onResults(results => {
+    if (!results.multiHandLandmarks) return;
 
-    hands.onResults(results => {
-        if (!results.multiHandLandmarks) return;
+    const gesture = detectGesture(results.multiHandLandmarks[0]);
+    if (gesture) {
+        gestureBox.innerText = "You: " + gesture;
+        socket.emit("gesture", { roomId: room, gesture });
+    }
+});
 
-        const gesture = detectGesture(results.multiHandLandmarks[0]);
-        if (gesture) {
-            gestureBox.innerText = "You: " + gesture;
-            socket.emit("gesture", { roomId: room, gesture });
-        }
-    });
+async function startGestureDetection() {
+    // 🔥 SEPARATE CAMERA ONLY FOR GESTURES
+    handStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    handVideo.srcObject = handStream;
 
-    const camera = new Camera(localVideo, {
+    gestureCamera = new Camera(handVideo, {
         onFrame: async () => {
-            await hands.send({ image: localVideo });
+            await hands.send({ image: handVideo });
         },
         width: 640,
         height: 480
     });
 
-    camera.start();
+    gestureCamera.start();
 }
 
-function stopGestureDetection() {
-    gestureRunning = false;
-}
-
-// Very simple gesture rules (reliable)
+// SIMPLE BUT RELIABLE GESTURES
 function detectGesture(landmarks) {
-    const tip = landmarks[8];   // index finger tip
+    const tip = landmarks[8];   // index tip
     const base = landmarks[5];  // index base
 
     if (tip.y < base.y - 0.05) return "HELLO 👋";

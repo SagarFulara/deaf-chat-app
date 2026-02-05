@@ -1,7 +1,8 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
     background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
     margin: 0;
+    padding: 0;
 }
 
 .container {
@@ -41,11 +42,13 @@ input {
     padding: 10px;
     border-radius: 8px;
     border: none;
+    outline: none;
 }
 
 .primary-btn {
     background: #00c6ff;
     color: black;
+    border: none;
     padding: 10px 12px;
     border-radius: 8px;
     cursor: pointer;
@@ -55,6 +58,7 @@ input {
 .secondary-btn {
     background: #00ff99;
     color: black;
+    border: none;
     padding: 10px 12px;
     border-radius: 8px;
     cursor: pointer;
@@ -64,6 +68,7 @@ input {
 .danger-btn {
     background: #ff4b2b;
     color: white;
+    border: none;
     padding: 10px 12px;
     border-radius: 8px;
     cursor: pointer;

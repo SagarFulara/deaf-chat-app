@@ -4,7 +4,7 @@ let username = "";
 let room = "";
 let pc = null;
 let localStream = null;
-let gestureCamera = null;
+let gestureRunning = false;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
@@ -95,7 +95,7 @@ socket.on("file-transfer", (data) => {
 });
 
 // =====================
-// ✅ FIXED WEBRTC VIDEO
+// ✅ CLEAN WEBRTC VIDEO (NO CONFLICT)
 // =====================
 
 async function startCall() {
@@ -106,7 +106,6 @@ async function startCall() {
         ]
     });
 
-    // 👉 IMPORTANT FIX: ab video tabhi aayegi jab call start ho
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
     localVideo.style.display = "block";
@@ -128,7 +127,7 @@ async function startCall() {
     await pc.setLocalDescription(offer);
     socket.emit("offer", { roomId: room, offer });
 
-    // 👉 START GESTURE CAMERA ONLY AFTER CALL STARTS
+    // Start gestures AFTER video starts
     startGestureDetection();
 }
 
@@ -173,7 +172,6 @@ socket.on("candidate", async (candidate) => {
     await pc.addIceCandidate(new RTCIceCandidate(candidate));
 });
 
-// 👉 FIX: End Call par video band ho jayegi
 function endCall() {
     if (pc) {
         pc.close();
@@ -195,44 +193,35 @@ function endCall() {
 }
 
 // =====================
-// ✅ FIXED HAND GESTURE
+// ✅ SIMPLE & WORKING GESTURE (NO CAMERA CONFLICT)
 // =====================
 
-const hands = new Hands({
-    locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-});
-
-hands.setOptions({
-    maxNumHands: 1,
-    modelComplexity: 1,
-    minDetectionConfidence: 0.7,
-    minTrackingConfidence: 0.7
-});
-
-hands.onResults(results => {
-    if (!results.multiHandLandmarks) return;
-
-    const gesture = detectGesture(results.multiHandLandmarks[0]);
-    if (gesture) {
-        gestureBox.innerText = "You: " + gesture;
-        socket.emit("gesture", { roomId: room, gesture });
-    }
-});
-
-function detectGesture(landmarks) {
-    const tip = landmarks[8];   // index tip
-    const base = landmarks[5];  // index base
-
-    if (tip.y < base.y - 0.05) return "HELLO 👋";
-    if (tip.x > base.x + 0.05) return "YES 👍";
-    if (tip.x < base.x - 0.05) return "NO ✋";
-    return null;
-}
-
 function startGestureDetection() {
-    if (gestureCamera) return;
+    if (gestureRunning) return;
+    gestureRunning = true;
 
-    gestureCamera = new Camera(localVideo, {
+    const hands = new Hands({
+        locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.7
+    });
+
+    hands.onResults(results => {
+        if (!results.multiHandLandmarks) return;
+
+        const gesture = detectGesture(results.multiHandLandmarks[0]);
+        if (gesture) {
+            gestureBox.innerText = "You: " + gesture;
+            socket.emit("gesture", { roomId: room, gesture });
+        }
+    });
+
+    const camera = new Camera(localVideo, {
         onFrame: async () => {
             await hands.send({ image: localVideo });
         },
@@ -240,14 +229,22 @@ function startGestureDetection() {
         height: 480
     });
 
-    gestureCamera.start();
+    camera.start();
 }
 
 function stopGestureDetection() {
-    if (gestureCamera) {
-        gestureCamera.stop();
-        gestureCamera = null;
-    }
+    gestureRunning = false;
+}
+
+// Very simple gesture rules (reliable)
+function detectGesture(landmarks) {
+    const tip = landmarks[8];   // index finger tip
+    const base = landmarks[5];  // index base
+
+    if (tip.y < base.y - 0.05) return "HELLO 👋";
+    if (tip.x > base.x + 0.05) return "YES 👍";
+    if (tip.x < base.x - 0.05) return "NO ✋";
+    return null;
 }
 
 // Receive gesture from other user

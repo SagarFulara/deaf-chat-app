@@ -9,22 +9,24 @@ const io = new Server(server);
 app.use(express.static('public'));
 
 io.on('connection', (socket) => {
-  console.log('User connected');
+  console.log('User connected:', socket.id);
 
-  socket.on('chat-message', (data) => {
-    io.emit('chat-message', data);
+  // Join private room
+  socket.on('join-room', (roomId) => {
+    socket.join(roomId);
+    console.log(socket.id + " joined room: " + roomId);
   });
 
-  socket.on('offer', (offer) => {
-    socket.broadcast.emit('offer', offer);
+  // Private message (only in room)
+  socket.on('private-message', ({ roomId, message }) => {
+    io.to(roomId).emit('private-message', {
+      sender: socket.id,
+      message: message
+    });
   });
 
-  socket.on('answer', (answer) => {
-    socket.broadcast.emit('answer', answer);
-  });
-
-  socket.on('candidate', (candidate) => {
-    socket.broadcast.emit('candidate', candidate);
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
   });
 });
 

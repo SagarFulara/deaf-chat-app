@@ -1,52 +1,52 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>DEAF Secure Chat</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="/socket.io/socket.io.js"></script>
+  <title>DEAF Private Chat</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: Arial; background: #0f172a; color: white; }
+    .box { width: 400px; margin: auto; padding: 20px; background: #111827; border-radius: 10px; }
+    input, button { padding: 10px; margin: 5px; width: 100%; }
+    #chat { height: 300px; overflow-y: auto; border: 1px solid gray; padding: 10px; }
+  </style>
 </head>
 <body>
 
-    <div class="container">
+<div class="box">
+  <h2>DEAF — One to One Chat</h2>
 
-        <div class="card">
+  <input id="room" placeholder="Enter Room ID (e.g. room123)">
+  <button onclick="joinRoom()">Join Chat</button>
 
-            <h1>DEAF — Encrypted Chat</h1>
+  <div id="chat"></div>
 
-            <!-- LOGIN SECTION -->
-            <div id="loginBox">
-                <h2>Login</h2>
-                <input type="text" id="username" placeholder="Enter your name">
-                <button class="primary-btn" onclick="login()">Enter Chat</button>
-            </div>
+  <input id="msg" placeholder="Type your message">
+  <button onclick="sendMessage()">Send</button>
+</div>
 
-            <!-- CHAT SECTION -->
-            <div id="chatBox" style="display:none;">
+<script>
+const socket = io();
 
-                <div class="header">
-                    <h2>Welcome, <span id="userLabel"></span></h2>
-                </div>
+function joinRoom() {
+  const room = document.getElementById("room").value;
+  socket.emit("join-room", room);
+  document.getElementById("chat").innerHTML += "<p>Joined room: " + room + "</p>";
+}
 
-                <div id="messages"></div>
+function sendMessage() {
+  const room = document.getElementById("room").value;
+  const message = document.getElementById("msg").value;
 
-                <div class="input-area">
-                    <input type="text" id="messageInput" placeholder="Type a message...">
-                    <button class="primary-btn" onclick="sendMessage()">Send</button>
-                    <button class="secondary-btn" onclick="startCall()">Start Video Call</button>
-                    <button class="danger-btn" onclick="endCall()">End Call</button>
-                </div>
+  socket.emit("private-message", { roomId: room, message: message });
 
-                <div class="video-area">
-                    <video id="localVideo" autoplay muted></video>
-                    <video id="remoteVideo" autoplay></video>
-                </div>
+  document.getElementById("chat").innerHTML += "<p><b>You:</b> " + message + "</p>";
+}
 
-            </div>
+socket.on("private-message", (data) => {
+  document.getElementById("chat").innerHTML += 
+    "<p><b>Friend:</b> " + data.message + "</p>";
+});
+</script>
 
-        </div>
-
-    </div>
-
-    <script src="script.js"></script>
 </body>
 </html>

@@ -1,9 +1,7 @@
-/* ---------- BODY & CONTAINER ---------- */
 body {
-    font-family: 'Poppins', sans-serif;
+    font-family: Arial, sans-serif;
     background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
     margin: 0;
-    padding: 0;
 }
 
 .container {
@@ -13,145 +11,82 @@ body {
     height: 100vh;
 }
 
-/* ---------- CARD ---------- */
 .card {
-    width: 70%;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(15px);
-    border-radius: 20px;
-    padding: 30px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    width: 65%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0px 0px 20px rgba(0,0,0,0.3);
     text-align: center;
     color: white;
-    transition: all 0.3s ease;
 }
 
-.card:hover {
-    transform: translateY(-5px);
-}
-
-/* ---------- HEADINGS ---------- */
 h1 {
-    font-size: 2.5rem;
     color: #00c6ff;
-    margin-bottom: 20px;
-    text-shadow: 1px 1px 5px rgba(0,0,0,0.5);
 }
 
-/* ---------- LOGIN & CHAT BOX ---------- */
-#loginBox, #chatBox {
-    margin-top: 20px;
-}
-
-/* ---------- MESSAGES BOX ---------- */
 #messages {
     height: 300px;
-    border: 1px solid rgba(0,198,255,0.6);
-    border-radius: 15px;
-    overflow-y: auto;
-    padding: 15px;
-    margin-bottom: 15px;
-    background: rgba(0,0,0,0.25);
-    text-align: left;
-    scrollbar-width: thin;
-    scrollbar-color: #00c6ff transparent;
-}
-
-#messages::-webkit-scrollbar {
-    width: 8px;
-}
-
-#messages::-webkit-scrollbar-thumb {
-    background-color: #00c6ff;
+    border: 1px solid #00c6ff;
     border-radius: 10px;
+    overflow-y: auto;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: rgba(0,0,0,0.2);
 }
 
-/* ---------- INPUTS ---------- */
 input {
     width: 70%;
-    padding: 12px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 8px;
     border: none;
-    outline: none;
-    margin-bottom: 12px;
-    font-size: 1rem;
-    background: rgba(255,255,255,0.1);
-    color: white;
-    transition: all 0.3s ease;
-}
-
-input:focus {
-    background: rgba(255,255,255,0.2);
-    box-shadow: 0 0 10px #00c6ff;
-}
-
-/* ---------- BUTTONS ---------- */
-.primary-btn, .secondary-btn, .danger-btn {
-    padding: 12px 20px;
-    border-radius: 12px;
-    font-weight: bold;
-    font-size: 1rem;
-    border: none;
-    cursor: pointer;
-    margin: 5px;
-    transition: all 0.3s ease;
 }
 
 .primary-btn {
-    background: linear-gradient(45deg, #00c6ff, #0072ff);
-    color: white;
-}
-
-.primary-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 15px #00c6ff;
+    background: #00c6ff;
+    color: black;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
 }
 
 .secondary-btn {
-    background: linear-gradient(45deg, #00ff99, #00c853);
-    color: white;
-}
-
-.secondary-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 15px #00ff99;
+    background: #00ff99;
+    color: black;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
 }
 
 .danger-btn {
-    background: linear-gradient(45deg, #ff4b2b, #ff416c);
+    background: #ff4b2b;
     color: white;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
 }
 
-.danger-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 15px #ff4b2b;
-}
-
-/* ---------- VIDEO AREA ---------- */
 .video-area {
     display: flex;
     justify-content: space-around;
-    margin-top: 20px;
-    flex-wrap: wrap;
+    margin-top: 15px;
 }
 
 video {
     width: 45%;
-    min-width: 200px;
-    border-radius: 15px;
-    border: 3px solid #00c6ff;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-    background: black;
-    transition: all 0.3s ease;
+    border-radius: 10px;
+    border: 2px solid #00c6ff;
 }
 
-video:hover {
-    transform: scale(1.05);
-}
-
-/* ---------- RESPONSIVE ---------- */
-@media screen and (max-width: 768px) {
-    .card { width: 90%; }
-    video { width: 90%; margin-bottom: 10px; }
-    input { width: 90%; }
+.gesture-box {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    color: #00ff99;
+    font-weight: bold;
 }

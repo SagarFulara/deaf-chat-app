@@ -1,71 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>DEAF</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="/socket.io/socket.io.js"></script>
+    <title>Deaf Chat App</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
 <div class="container">
-  <div class="card">
+    <div class="card">
 
-    <h1>DEAF Video Chat</h1>
+        <h1>Deaf Chat + Video Call</h1>
 
-    <!-- LOGIN + ROOM -->
-    <div id="loginBox">
-      <input id="username" placeholder="Enter your name">
-      <input id="room" placeholder="Enter Room ID (e.g. room123)">
-      <button class="primary-btn" onclick="login()">Join Room</button>
-    </div>
-
-    <!-- CHAT + VIDEO -->
-    <div id="chatBox" style="display:none;">
-
-      <p>Logged in as: <b id="userLabel"></b> | Room: <b id="roomLabel"></b></p>
-
-      <div id="messages"></div>
-
-      <input id="messageInput" placeholder="Type message">
-      <button class="primary-btn" onclick="sendMessage()">Send</button>
-
-      <hr>
-
-      <button class="secondary-btn" onclick="startCall()">Start Video Call</button>
-      <button class="danger-btn" onclick="endCall()">End Call</button>
-      <button class="secondary-btn" onclick="startHandTracking()">Start Hand Gestures</button>
-
-      <br><br>
-
-      <!-- FILE TRANSFER -->
-      <input type="file" id="fileInput">
-      <button class="secondary-btn" onclick="sendFile()">Send File</button>
-      <p id="fileStatus" style="color: yellow;"></p>
-
-      <div class="video-area">
-
-        <div class="video-box">
-          <p id="myGesture" class="gesture-label">Your Gesture: --</p>
-          <video id="localVideo" autoplay playsinline></video>
-          <p class="name-label">You</p>
+        <div id="loginBox">
+            <input id="username" placeholder="Enter your name">
+            <input id="roomId" placeholder="Enter Room ID">
+            <button class="primary-btn" onclick="login()">Join</button>
         </div>
 
-        <div class="video-box">
-          <p id="friendGesture" class="gesture-label">Friend Gesture: --</p>
-          <video id="remoteVideo" autoplay playsinline></video>
-          <p class="name-label">Friend</p>
+        <div id="chatBox" style="display:none;">
+            <h3>Welcome: <span id="userLabel"></span></h3>
+            <h4>Room: <span id="roomLabel"></span></h4>
+
+            <div id="messages"></div>
+
+            <input id="messageInput" placeholder="Type message">
+            <button class="primary-btn" onclick="sendMessage()">Send</button>
+
+            <br><br>
+
+            <input type="file" id="fileInput">
+            <button class="secondary-btn" onclick="sendFile()">Send File</button>
+            <p id="fileStatus"></p>
+
+            <hr>
+
+            <button class="primary-btn" onclick="startCall()">Start Call</button>
+            <button class="danger-btn" onclick="endCall()">End Call</button>
+
+            <div class="video-area">
+                <div>
+                    <video id="localVideo" autoplay muted></video>
+                    <p class="gesture-label" id="myGesture">Your Gesture: -</p>
+                </div>
+                <div>
+                    <video id="remoteVideo" autoplay></video>
+                    <p class="gesture-label" id="remoteGesture">Their Gesture: -</p>
+                </div>
+            </div>
         </div>
 
-        <video id="handFeed" hidden></video>
-      </div>
-
     </div>
-  </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script src="script.js"></script>
-
 </body>
 </html>

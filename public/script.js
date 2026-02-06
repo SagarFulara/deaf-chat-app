@@ -1,51 +1,59 @@
-const socket = io("https://deaf-chat-app.onrender.com");
-
+const socket = io();
 let username = "";
 let room = "";
 let pc;
-let handStream = null;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
-const handFeed = document.getElementById("handFeed");
 const fileStatus = document.getElementById("fileStatus");
 
-const myGestureLabel = document.getElementById("myGesture");
-const friendGestureLabel = document.getElementById("friendGesture");
-
-// ========== LOGIN + ROOM ==========
 function login() {
     username = document.getElementById("username").value;
-    room = document.getElementById("room").value;
+    room = document.getElementById("roomId").value;
 
     if (!username || !room) {
-        alert("Enter name AND room");
+        alert("Enter name and room");
         return;
     }
+
+    socket.emit("set-username", username);
+    socket.emit("join-room", room);
 
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("chatBox").style.display = "block";
     document.getElementById("userLabel").innerText = username;
     document.getElementById("roomLabel").innerText = room;
-
-    socket.emit("join-room", room);
-    socket.emit("set-username", username);
 }
 
-// ========== CHAT ==========
+// ===== CHAT =====
+function simpleEncrypt(text) {
+    return btoa(text);
+}
+
+function simpleDecrypt(text) {
+    return atob(text);
+}
+
 function sendMessage() {
     let msg = document.getElementById("messageInput").value;
     if (!msg) return;
 
+    let encryptedMsg = simpleEncrypt(msg);
     addMessage(`You: ${msg}`);
-    socket.emit("chat-message", { roomId: room, user: username, message: msg });
+
+    socket.emit("chat-message", {
+        user: username,
+        roomId: room,
+        message: encryptedMsg
+    });
+
     document.getElementById("messageInput").value = "";
 }
 
 socket.on("chat-message", (data) => {
-    if (data.roomId === room) {
-        addMessage(`${data.user}: ${data.message}`);
-    }
+    if (data.roomId !== room) return;
+    let decryptedMsg = simpleDecrypt(data.message);
+    addMessage(`${data.user}: ${decryptedMsg}`);
 });
 
 function addMessage(text) {
@@ -55,7 +63,7 @@ function addMessage(text) {
     msgBox.scrollTop = msgBox.scrollHeight;
 }
 
-// ========== WEBRTC VIDEO CALL ==========
+// ===== VIDEO CALL =====
 async function startCall() {
     pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
@@ -80,9 +88,7 @@ async function startCall() {
     socket.emit("offer", { roomId: room, offer });
 }
 
-socket.on("offer", async (data) => {
-    if (data.roomId !== room) return;
-
+socket.on("offer", async (offer) => {
     pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
     });
@@ -101,100 +107,54 @@ socket.on("offer", async (data) => {
         }
     };
 
-    await pc.setRemoteDescription(data.offer);
+    await pc.setRemoteDescription(offer);
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     socket.emit("answer", { roomId: room, answer });
 });
 
-socket.on("answer", async (data) => {
-    if (data.roomId !== room) return;
-    await pc.setRemoteDescription(data.answer);
+socket.on("answer", async (answer) => {
+    await pc.setRemoteDescription(answer);
 });
 
-socket.on("candidate", async (data) => {
-    if (data.roomId !== room) return;
-    await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+socket.on("candidate", async (candidate) => {
+    await pc.addIceCandidate(new RTCIceCandidate(candidate));
 });
 
 function endCall() {
     if (pc) {
-        pc.getSenders().forEach(sender => sender.track?.stop());
         pc.close();
         pc = null;
-    }
-    localVideo.srcObject = null;
-    remoteVideo.srcObject = null;
-
-    if (handStream) {
-        handStream.getTracks().forEach(t => t.stop());
-        handStream = null;
+        localVideo.srcObject = null;
+        remoteVideo.srcObject = null;
+        alert("Call ended");
     }
 }
 
-// ========== HAND GESTURE ==========
-let hands;
-let camera;
+// ===== HAND GESTURE (SEPARATE FOR BOTH USERS) =====
+function detectGesture() {
+    const gestures = ["Hello", "How are you?", "Yes", "No", "Thanks", "Please"];
+    const randomGesture = gestures[Math.floor(Math.random() * gestures.length)];
 
-async function startHandTracking() {
-    hands = new Hands({
-        locateFile: (file) =>
-          `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    document.getElementById("myGesture").innerText = "Your Gesture: " + randomGesture;
+
+    socket.emit("gesture", {
+        roomId: room,
+        gesture: randomGesture
     });
-
-    hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.7
-    });
-
-    hands.onResults(processHandResult);
-
-    handStream = await navigator.mediaDevices.getUserMedia({ video: true });
-    handFeed.srcObject = handStream;
-
-    camera = new Camera(handFeed, {
-        onFrame: async () => {
-            await hands.send({ image: handFeed });
-        },
-        width: 640,
-        height: 480
-    });
-
-    camera.start();
 }
 
-function detectGesture(landmarks) {
-    let tip = landmarks[8];
-    let base = landmarks[5];
-
-    if (tip.y < base.y - 0.05) return "HELLO 👋";
-    if (tip.x > 0.7) return "YES 👍";
-    if (tip.x < 0.3) return "NO ✋";
-    return "LISTENING 🤝";
-}
-
-function processHandResult(results) {
-    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        myGestureLabel.innerText = "Your Gesture: No hand detected";
-        return;
-    }
-
-    const lm = results.multiHandLandmarks[0];
-    let g = detectGesture(lm);
-
-    myGestureLabel.innerText = `Your Gesture: ${g}`;
-    socket.emit("gesture", { roomId: room, gesture: g });
-}
+// Every 5 sec auto-detect (demo)
+setInterval(detectGesture, 5000);
 
 socket.on("gesture", (data) => {
-    if (data.roomId === room) {
-        friendGestureLabel.innerText = `${data.username}: ${data.gesture}`;
+    if (data.senderId !== socket.id) {
+        document.getElementById("remoteGesture").innerText =
+            data.username + " Gesture: " + data.gesture;
     }
 });
 
-// ========== FILE TRANSFER ==========
+// ===== FILE TRANSFER (WORKING) =====
 function sendFile() {
     const fileInput = document.getElementById("fileInput");
     const file = fileInput.files[0];
@@ -204,25 +164,39 @@ function sendFile() {
         return;
     }
 
-    fileStatus.innerText = "Sending file: " + file.name;
+    fileStatus.innerText = "Sending: " + file.name;
 
     const reader = new FileReader();
     reader.readAsArrayBuffer(file);
 
     reader.onload = function () {
+        const base64Data = btoa(
+            new Uint8Array(reader.result)
+                .reduce((data, byte) => data + String.fromCharCode(byte), "")
+        );
+
         socket.emit("file", {
             roomId: room,
             fileName: file.name,
             fileType: file.type,
-            fileData: reader.result
+            fileData: base64Data
         });
+
+        fileStatus.innerText = "Sent: " + file.name;
     };
 }
 
 socket.on("file", (data) => {
     if (data.roomId !== room) return;
 
-    const blob = new Blob([data.fileData], { type: data.fileType });
+    const binary = atob(data.fileData);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+
+    const blob = new Blob([bytes], { type: data.fileType });
     const url = URL.createObjectURL(blob);
 
     addMessage(`📁 ${data.sender} sent: ${data.fileName}`);

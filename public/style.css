@@ -1,5 +1,5 @@
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: Arial, sans-serif;
     background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
     margin: 0;
     padding: 0;
@@ -81,25 +81,13 @@ input {
     margin-top: 15px;
 }
 
-.video-box {
-    width: 45%;
-    text-align: center;
-}
-
 video {
-    width: 100%;
+    width: 45%;
     border-radius: 10px;
     border: 2px solid #00c6ff;
 }
 
 .gesture-label {
-    color: yellow;
-    font-size: 16px;
     font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.name-label {
-    color: #00c6ff;
-    font-weight: bold;
+    color: #00ff99;
 }

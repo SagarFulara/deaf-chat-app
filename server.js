@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  maxHttpBufferSize: 10 * 1024 * 1024 // 10MB file limit
+  maxHttpBufferSize: 15 * 1024 * 1024 // 15MB limit (file fix)
 });
 
 app.use(express.static('public'));
@@ -47,9 +47,11 @@ io.on('connection', (socket) => {
     socket.to(data.roomId).emit("candidate", data.candidate);
   });
 
+  // ✅ FILE TRANSFER FIX (important)
   socket.on("file", (data) => {
     io.to(data.roomId).emit("file", {
       sender: socket.data.username || "User",
+      roomId: data.roomId,
       fileName: data.fileName,
       fileType: data.fileType,
       fileData: data.fileData

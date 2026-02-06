@@ -2,6 +2,7 @@ const socket = io();
 let username = "";
 let room = "";
 let pc;
+let gestureInterval = null;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
@@ -131,9 +132,9 @@ function endCall() {
     }
 }
 
-// ===== HAND GESTURE (SEPARATE FOR BOTH USERS) =====
+// ===== HAND GESTURE (BUTTON CONTROLLED) =====
 function detectGesture() {
-    const gestures = ["Hello", "How are you?", "Yes", "No", "Thanks", "Please"];
+    const gestures = ["Hello", "How are you?", "Yes", "No", "Thanks", "Please", "Good", "Okay"];
     const randomGesture = gestures[Math.floor(Math.random() * gestures.length)];
 
     document.getElementById("myGesture").innerText = "Your Gesture: " + randomGesture;
@@ -144,8 +145,17 @@ function detectGesture() {
     });
 }
 
-// Every 5 sec auto-detect (demo)
-setInterval(detectGesture, 5000);
+function startGesture() {
+    if (gestureInterval) return;
+    detectGesture();
+    gestureInterval = setInterval(detectGesture, 3000);
+}
+
+function stopGesture() {
+    clearInterval(gestureInterval);
+    gestureInterval = null;
+    document.getElementById("myGesture").innerText = "Your Gesture: -";
+}
 
 socket.on("gesture", (data) => {
     if (data.senderId !== socket.id) {
@@ -154,7 +164,7 @@ socket.on("gesture", (data) => {
     }
 });
 
-// ===== FILE TRANSFER (WORKING) =====
+// ===== FILE TRANSFER (100% FIXED) =====
 function sendFile() {
     const fileInput = document.getElementById("fileInput");
     const file = fileInput.files[0];

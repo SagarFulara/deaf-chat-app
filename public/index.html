@@ -1,54 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>DEAF Chat + Video</title>
-    <link rel="stylesheet" href="style.css">
+  <title>DEAF Chat + Video + Gestures</title>
 
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fingerpose/dist/fingerpose.js"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="container">
   <div class="card">
 
-    <h1>DEAF Chat & Video</h1>
+    <h1>DEAF — Private Chat</h1>
 
+    <!-- LOGIN -->
     <div id="loginBox">
       <input id="username" placeholder="Enter your name">
-      <input id="room" placeholder="Enter Room ID (e.g. room123)">
+      <input id="room" placeholder="Enter Room ID (room123)">
       <button class="primary-btn" onclick="login()">Join Room</button>
     </div>
 
+    <!-- CHAT + VIDEO -->
     <div id="chatBox" style="display:none;">
 
-      <p>Logged in as: <span id="userLabel"></span></p>
+      <p>Logged in as: <b id="userLabel"></b></p>
 
       <div id="messages"></div>
 
       <input id="messageInput" placeholder="Type message">
-      <button class="secondary-btn" onclick="sendMessage()">Send</button>
+      <button class="primary-btn" onclick="sendMessage()">Send</button>
 
-      <input type="file" id="fileInput">
-      <button class="secondary-btn" onclick="sendFile()">Send File</button>
+      <hr>
 
-      <div class="video-area">
-        <video id="localVideo" autoplay muted style="display:none"></video>
-        <video id="remoteVideo" autoplay style="display:none"></video>
-      </div>
-
-      <!-- 👇 NEW: Hidden video ONLY for gestures -->
-      <video id="handFeed" autoplay muted hidden></video>
-
-      <div id="gestureCaption" class="gesture-box"></div>
-
-      <button class="secondary-btn" onclick="startCall()">Start Call</button>
+      <button class="secondary-btn" onclick="startCall()">Start Video Call</button>
       <button class="danger-btn" onclick="endCall()">End Call</button>
 
-    </div>
+      <button class="secondary-btn" onclick="startHandGestures()">Start Hand Gestures</button>
 
+      <input type="file" id="fileInput">
+      <button class="primary-btn" onclick="sendFile()">Send File</button>
+
+      <p id="gestureText" class="gesture-box">No gesture detected</p>
+
+      <div class="video-area">
+        <video id="localVideo" autoplay playsinline></video>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="handFeed" hidden></video>
+      </div>
+
+    </div>
   </div>
 </div>
 

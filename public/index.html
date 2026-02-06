@@ -12,16 +12,17 @@
 
     <h1>DEAF Video Chat</h1>
 
-    <!-- LOGIN -->
+    <!-- LOGIN + ROOM -->
     <div id="loginBox">
       <input id="username" placeholder="Enter your name">
-      <button class="primary-btn" onclick="login()">Login</button>
+      <input id="room" placeholder="Enter Room ID (e.g. room123)">
+      <button class="primary-btn" onclick="login()">Join Room</button>
     </div>
 
     <!-- CHAT + VIDEO -->
     <div id="chatBox" style="display:none;">
 
-      <p>Logged in as: <b id="userLabel"></b></p>
+      <p>Logged in as: <b id="userLabel"></b> | Room: <b id="roomLabel"></b></p>
 
       <div id="messages"></div>
 

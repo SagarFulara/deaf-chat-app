@@ -1,5 +1,5 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
     background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
     margin: 0;
     padding: 0;
@@ -13,7 +13,7 @@ body {
 }
 
 .card {
-    width: 65%;
+    width: 70%;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border-radius: 15px;
@@ -42,13 +42,14 @@ input {
     padding: 10px;
     border-radius: 8px;
     border: none;
+    outline: none;
 }
 
 .primary-btn {
     background: #00c6ff;
     color: black;
     border: none;
-    padding: 10px;
+    padding: 10px 12px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
@@ -58,7 +59,7 @@ input {
     background: #00ff99;
     color: black;
     border: none;
-    padding: 10px;
+    padding: 10px 12px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
@@ -68,7 +69,7 @@ input {
     background: #ff4b2b;
     color: white;
     border: none;
-    padding: 10px;
+    padding: 10px 12px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
@@ -80,14 +81,25 @@ input {
     margin-top: 15px;
 }
 
-video {
+.video-box {
     width: 45%;
+    text-align: center;
+}
+
+video {
+    width: 100%;
     border-radius: 10px;
     border: 2px solid #00c6ff;
 }
 
-.gesture-box {
+.gesture-label {
     color: yellow;
-    font-size: 18px;
-    margin: 10px 0;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.name-label {
+    color: #00c6ff;
+    font-weight: bold;
 }

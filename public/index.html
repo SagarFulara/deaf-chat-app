@@ -2,25 +2,20 @@
 <html>
 <head>
   <title>DEAF Chat + Video + Gestures</title>
-
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-
   <link rel="stylesheet" href="style.css">
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
 <div class="container">
   <div class="card">
 
-    <h1>DEAF — Private Chat</h1>
+    <h1>DEAF Video Chat</h1>
 
     <!-- LOGIN -->
     <div id="loginBox">
       <input id="username" placeholder="Enter your name">
-      <input id="room" placeholder="Enter Room ID (room123)">
-      <button class="primary-btn" onclick="login()">Join Room</button>
+      <button class="primary-btn" onclick="login()">Login</button>
     </div>
 
     <!-- CHAT + VIDEO -->
@@ -37,17 +32,22 @@
 
       <button class="secondary-btn" onclick="startCall()">Start Video Call</button>
       <button class="danger-btn" onclick="endCall()">End Call</button>
-
-      <button class="secondary-btn" onclick="startHandGestures()">Start Hand Gestures</button>
-
-      <input type="file" id="fileInput">
-      <button class="primary-btn" onclick="sendFile()">Send File</button>
-
-      <p id="gestureText" class="gesture-box">No gesture detected</p>
+      <button class="secondary-btn" onclick="startHandTracking()">Start Hand Gestures</button>
 
       <div class="video-area">
-        <video id="localVideo" autoplay playsinline></video>
-        <video id="remoteVideo" autoplay playsinline></video>
+
+        <div class="video-box">
+          <p id="myGesture" class="gesture-label">Your Gesture: --</p>
+          <video id="localVideo" autoplay playsinline></video>
+          <p class="name-label">You</p>
+        </div>
+
+        <div class="video-box">
+          <p id="friendGesture" class="gesture-label">Friend Gesture: --</p>
+          <video id="remoteVideo" autoplay playsinline></video>
+          <p class="name-label">Friend</p>
+        </div>
+
         <video id="handFeed" hidden></video>
       </div>
 
@@ -55,6 +55,9 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script src="script.js"></script>
+
 </body>
 </html>

@@ -1,13 +1,14 @@
 const socket = io("https://deaf-chat-app.onrender.com");
 
 let username = "";
-let room = "";      // <-- ROOM USER DALEGA
+let room = "";
 let pc;
 let handStream = null;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const handFeed = document.getElementById("handFeed");
+const fileStatus = document.getElementById("fileStatus");
 
 const myGestureLabel = document.getElementById("myGesture");
 const friendGestureLabel = document.getElementById("friendGesture");
@@ -164,10 +165,9 @@ async function startHandTracking() {
     camera.start();
 }
 
-// SIMPLE GESTURE RULES (ALAG-ALAG LABEL KE LIYE)
 function detectGesture(landmarks) {
-    let tip = landmarks[8];   // index finger tip
-    let base = landmarks[5];  // index finger base
+    let tip = landmarks[8];
+    let base = landmarks[5];
 
     if (tip.y < base.y - 0.05) return "HELLO 👋";
     if (tip.x > 0.7) return "YES 👍";
@@ -192,4 +192,44 @@ socket.on("gesture", (data) => {
     if (data.roomId === room) {
         friendGestureLabel.innerText = `${data.username}: ${data.gesture}`;
     }
+});
+
+// ========== FILE TRANSFER ==========
+function sendFile() {
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert("Select a file first");
+        return;
+    }
+
+    fileStatus.innerText = "Sending file: " + file.name;
+
+    const reader = new FileReader();
+    reader.readAsArrayBuffer(file);
+
+    reader.onload = function () {
+        socket.emit("file", {
+            roomId: room,
+            fileName: file.name,
+            fileType: file.type,
+            fileData: reader.result
+        });
+    };
+}
+
+socket.on("file", (data) => {
+    if (data.roomId !== room) return;
+
+    const blob = new Blob([data.fileData], { type: data.fileType });
+    const url = URL.createObjectURL(blob);
+
+    addMessage(`📁 ${data.sender} sent: ${data.fileName}`);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = data.fileName;
+    link.innerText = "Download " + data.fileName;
+    document.getElementById("messages").appendChild(link);
 });

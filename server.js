@@ -20,26 +20,37 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat-message', (data) => {
-    io.emit('chat-message', data);
+    io.to(data.roomId).emit('chat-message', data);
   });
 
   socket.on("gesture", ({ roomId, gesture }) => {
     io.to(roomId).emit("gesture", {
-      username: socket.data.username,
+      username: socket.data.username || "User",
+      roomId,
       gesture
     });
   });
 
-  socket.on("offer", (offer) => {
-    socket.broadcast.emit("offer", offer);
+  socket.on("offer", (data) => {
+    socket.to(data.roomId).emit("offer", data);
   });
 
-  socket.on("answer", (answer) => {
-    socket.broadcast.emit("answer", answer);
+  socket.on("answer", (data) => {
+    socket.to(data.roomId).emit("answer", data);
   });
 
-  socket.on("candidate", (candidate) => {
-    socket.broadcast.emit("candidate", candidate);
+  socket.on("candidate", (data) => {
+    socket.to(data.roomId).emit("candidate", data);
+  });
+
+  socket.on("file", (data) => {
+    io.to(data.roomId).emit("file", {
+      sender: socket.data.username || "User",
+      roomId: data.roomId,
+      fileName: data.fileName,
+      fileType: data.fileType,
+      fileData: data.fileData
+    });
   });
 
   socket.on('disconnect', () => {

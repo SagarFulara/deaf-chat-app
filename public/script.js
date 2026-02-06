@@ -12,7 +12,7 @@ const remoteVideo = document.getElementById("remoteVideo");
 const handVideo = document.getElementById("handFeed");
 const gestureBox = document.getElementById("gestureText");
 
-// ========== LOGIN ==========
+// ================= LOGIN =================
 function login() {
     username = document.getElementById("username").value;
     room = document.getElementById("room").value;
@@ -29,7 +29,7 @@ function login() {
     socket.emit("join-room", { roomId: room, username });
 }
 
-// ========== CHAT ==========
+// ================= CHAT =================
 function sendMessage() {
     let msg = document.getElementById("messageInput").value;
     if (!msg) return;
@@ -52,27 +52,28 @@ function addMessage(text) {
     box.scrollTop = box.scrollHeight;
 }
 
-// ========== VIDEO CALL (FIXED) ==========
+// ================= VIDEO CALL (FIXED) =================
 async function startCall() {
+    if (!room) return alert("Join a room first!");
+
     pc = new RTCPeerConnection({
         iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" }
+            { urls: "stun:stun.l.google.com:19302" }
         ]
     });
 
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
 
-    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-    pc.ontrack = e => {
-        remoteVideo.srcObject = e.streams[0];
+    pc.ontrack = (event) => {
+        remoteVideo.srcObject = event.streams[0];
     };
 
-    pc.onicecandidate = e => {
-        if (e.candidate) {
-            socket.emit("candidate", { roomId: room, candidate: e.candidate });
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            socket.emit("candidate", { roomId: room, candidate: event.candidate });
         }
     };
 
@@ -90,15 +91,15 @@ socket.on("offer", async (offer) => {
 
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
-    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-    pc.ontrack = e => {
-        remoteVideo.srcObject = e.streams[0];
+    pc.ontrack = (event) => {
+        remoteVideo.srcObject = event.streams[0];
     };
 
-    pc.onicecandidate = e => {
-        if (e.candidate) {
-            socket.emit("candidate", { roomId: room, candidate: e.candidate });
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            socket.emit("candidate", { roomId: room, candidate: event.candidate });
         }
     };
 
@@ -117,7 +118,10 @@ socket.on("candidate", async (c) => {
 });
 
 function endCall() {
-    if (pc) pc.close();
+    if (pc) {
+        pc.close();
+        pc = null;
+    }
 
     if (localStream) {
         localStream.getTracks().forEach(t => t.stop());
@@ -125,10 +129,9 @@ function endCall() {
     }
 
     remoteVideo.srcObject = null;
-    pc = null;
 }
 
-// ========== HAND GESTURES (WORKING) ==========
+// ================= HAND GESTURES (FIXED) =================
 async function startHandGestures() {
     hands = new Hands({
         locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
@@ -171,13 +174,31 @@ function processHandResult(results) {
 }
 
 function detectGesture(lm) {
-    const thumb = lm[4];
-    const index = lm[8];
-    const wrist = lm[0];
+    const thumb = lm[4];      // Thumb tip
+    const index = lm[8];      // Index tip
+    const middle = lm[12];    // Middle tip
+    const wrist = lm[0];      // Wrist
 
-    if (wrist.y < index.y - 0.15) return "HELLO 👋";
-    if (thumb.y < wrist.y - 0.1) return "YES 👍";
-    if (index.y < wrist.y) return "NO ✋";
+    // ---- HELLO (hand raised clearly) ----
+    if (wrist.y < index.y - 0.18) {
+        return "HELLO 👋";
+    }
+
+    // ---- YES (STRICT THUMBS UP) ----
+    if (
+        thumb.y < wrist.y - 0.12 &&      // thumb clearly above wrist
+        index.y > wrist.y               // index DOWN (closed fist)
+    ) {
+        return "YES 👍";
+    }
+
+    // ---- NO (OPEN PALM) ----
+    if (
+        index.y < wrist.y &&
+        middle.y < wrist.y
+    ) {
+        return "NO ✋";
+    }
 
     return null;
 }
@@ -186,7 +207,7 @@ socket.on("gesture", (data) => {
     gestureBox.innerText = `${data.username}: ${data.gesture}`;
 });
 
-// ========== FILE TRANSFER ==========
+// ================= FILE TRANSFER =================
 function sendFile() {
     const file = document.getElementById("fileInput").files[0];
     if (!file) return alert("Select a file");

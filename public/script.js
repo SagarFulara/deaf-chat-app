@@ -1,10 +1,15 @@
-const socket = io();
+// SOCKET FIX
+const socket = io({
+  transports: ["websocket"],
+  reconnection: true
+});
 
 let name, room;
 let pc;
 let localStream;
 let isGestureRunning = false;
 
+// ELEMENTS
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const canvas = document.getElementById("canvas");
@@ -15,11 +20,33 @@ function join() {
   name = document.getElementById("name").value;
   room = document.getElementById("room").value;
 
+  console.log("Joining room:", room);
+
   socket.emit("set-username", name);
   socket.emit("join-room", room);
 
   document.getElementById("login").style.display = "none";
   document.getElementById("main").style.display = "block";
+}
+
+// ================= CHAT =================
+function sendMsg() {
+  const msg = document.getElementById("msg").value;
+
+  if (!msg) return;
+
+  socket.emit("chat-message", { user: name, room, msg });
+
+  addMsg("You: " + msg);
+  document.getElementById("msg").value = "";
+}
+
+socket.on("chat-message", (d) => {
+  addMsg(d.user + ": " + d.msg);
+});
+
+function addMsg(m) {
+  document.getElementById("messages").innerHTML += `<p>${m}</p>`;
 }
 
 // ================= VIDEO CALL =================
@@ -41,6 +68,7 @@ async function startCall() {
   );
 
   pc.ontrack = e => {
+    console.log("Remote stream received");
     remoteVideo.srcObject = e.streams[0];
   };
 
@@ -56,6 +84,7 @@ async function startCall() {
   socket.emit("offer", { room, offer });
 }
 
+// RECEIVE OFFER
 socket.on("offer", async (offer) => {
 
   pc = new RTCPeerConnection({
@@ -91,17 +120,19 @@ socket.on("offer", async (offer) => {
   socket.emit("answer", { room, answer });
 });
 
+// RECEIVE ANSWER
 socket.on("answer", async (ans) => {
   await pc.setRemoteDescription(new RTCSessionDescription(ans));
 });
 
+// ICE
 socket.on("candidate", async (c) => {
   if (pc) {
     await pc.addIceCandidate(new RTCIceCandidate(c));
   }
 });
 
-// END CALL FIX
+// END CALL
 function endCall() {
 
   if (pc) {
@@ -115,8 +146,6 @@ function endCall() {
 
   localVideo.srcObject = null;
   remoteVideo.srcObject = null;
-
-  isGestureRunning = false;
 }
 
 // ================= GESTURE =================
@@ -138,7 +167,7 @@ hands.setOptions({
 
 hands.onResults((res) => {
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (!res.multiHandLandmarks || res.multiHandLandmarks.length === 0) {
     document.getElementById("myGesture").innerText = "No Hand ❌";
@@ -150,7 +179,30 @@ hands.onResults((res) => {
   drawConnectors(ctx, l, HAND_CONNECTIONS);
   drawLandmarks(ctx, l);
 
-  document.getElementById("myGesture").innerText = "Hand Detected ✋";
+  let text = "Detecting...";
+
+  if (
+    l[8].y < l[6].y &&
+    l[12].y < l[10].y &&
+    l[16].y < l[14].y &&
+    l[20].y < l[18].y
+  ) {
+    text = "Hello ✋";
+  } else if (l[4].y < l[3].y) {
+    text = "Yes 👍";
+  } else {
+    text = "No 👊";
+  }
+
+  document.getElementById("myGesture").innerText = text;
+
+  socket.emit("gesture", { room, text });
+});
+
+// RECEIVE GESTURE
+socket.on("gesture", (d) => {
+  document.getElementById("remoteGesture").innerText =
+    d.sender + ": " + d.text;
 });
 
 // START GESTURE
@@ -163,7 +215,6 @@ async function startGesture() {
 
   await localVideo.play();
 
-  // canvas fix
   canvas.width = localVideo.videoWidth || 320;
   canvas.height = localVideo.videoHeight || 240;
 
@@ -188,3 +239,30 @@ async function runGesture() {
 function stopGesture() {
   isGestureRunning = false;
 }
+
+// ================= FILE =================
+function sendFile() {
+  const f = document.getElementById("file").files[0];
+  if (!f) return;
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    socket.emit("file", {
+      room,
+      name: f.name,
+      data: reader.result
+    });
+  };
+
+  reader.readAsDataURL(f);
+}
+
+socket.on("file", (d) => {
+  const a = document.createElement("a");
+  a.href = d.data;
+  a.download = d.name;
+  a.innerText = "Download " + d.name;
+
+  document.getElementById("messages").appendChild(a);
+});

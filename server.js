@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  maxHttpBufferSize: 15 * 1024 * 1024 // 15MB limit (file fix)
+  maxHttpBufferSize: 15 * 1024 * 1024
 });
 
 app.use(express.static('public'));
@@ -18,9 +18,8 @@ io.on('connection', (socket) => {
     socket.data.username = name;
   });
 
-  socket.on('join-room', (roomId) => {
+  socket.on("join-room", (roomId) => {
     socket.join(roomId);
-    console.log(socket.id + " joined room: " + roomId);
   });
 
   socket.on("chat-message", (data) => {
@@ -47,7 +46,6 @@ io.on('connection', (socket) => {
     socket.to(data.roomId).emit("candidate", data.candidate);
   });
 
-  // ✅ FILE TRANSFER FIX (important)
   socket.on("file", (data) => {
     io.to(data.roomId).emit("file", {
       sender: socket.data.username || "User",
@@ -57,11 +55,7 @@ io.on('connection', (socket) => {
       fileData: data.fileData
     });
   });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Server running on " + PORT));
+server.listen(PORT, () => console.log("Server running"));

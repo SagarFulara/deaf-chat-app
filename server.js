@@ -1,52 +1,53 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-
+const express = require("express");
 const app = express();
-const server = http.createServer(app);
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
 
-const io = new Server(server, {
-  maxHttpBufferSize: 20 * 1024 * 1024
-});
+app.use(express.static("public"));
 
-app.use(express.static('public'));
+let users = {};
 
-io.on('connection', (socket) => {
+io.on("connection", socket => {
 
-  socket.on("set-username", (name) => {
-    socket.data.username = name;
+  socket.on("set-username", name => {
+    users[socket.id] = name;
   });
 
-  socket.on("join-room", (room) => {
+  socket.on("join-room", room => {
     socket.join(room);
   });
 
-  socket.on("chat-message", (data) => {
-    io.to(data.room).emit("chat-message", data);
+  // CHAT FIX
+  socket.on("chat-message", data => {
+    socket.to(data.room).emit("chat-message", data);
   });
 
-  socket.on("gesture", (data) => {
-    io.to(data.room).emit("gesture", {
-      sender: socket.data.username,
+  // VIDEO SIGNALING FIX
+  socket.on("offer", data => {
+    socket.to(data.room).emit("offer", data.offer);
+  });
+
+  socket.on("answer", data => {
+    socket.to(data.room).emit("answer", data.answer);
+  });
+
+  socket.on("candidate", data => {
+    socket.to(data.room).emit("candidate", data.candidate);
+  });
+
+  // GESTURE FIX
+  socket.on("gesture", data => {
+    socket.to(data.room).emit("gesture", {
+      sender: users[socket.id] || "User",
       text: data.text
     });
   });
 
-  socket.on("offer", (data) => {
-    socket.to(data.room).emit("offer", data.offer);
+  // FILE FIX
+  socket.on("file", data => {
+    socket.to(data.room).emit("file", data);
   });
 
-  socket.on("answer", (data) => {
-    socket.to(data.room).emit("answer", data.answer);
-  });
-
-  socket.on("candidate", (data) => {
-    socket.to(data.room).emit("candidate", data.candidate);
-  });
-
-  socket.on("file", (data) => {
-    io.to(data.room).emit("file", data);
-  });
 });
 
-server.listen(process.env.PORT || 3000);
+http.listen(3000, () => console.log("Server running"));

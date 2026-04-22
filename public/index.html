@@ -1,10 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deaf Chat</title>
-
   <link rel="stylesheet" href="style.css">
 
   <script src="/socket.io/socket.io.js"></script>
@@ -17,75 +14,49 @@
 
 <body>
 
-<div class="app">
+<div id="login">
+  <h2>Deaf Chat</h2>
+  <input id="name" placeholder="Name">
+  <input id="room" placeholder="Room">
+  <button onclick="join()">Join</button>
+</div>
 
-  <!-- LOGIN SCREEN -->
-  <div id="login" class="center">
-    <h2>Deaf Chat</h2>
+<div id="main" style="display:none;">
 
-    <input id="name" type="text" placeholder="Enter your name">
-    <input id="room" type="text" placeholder="Enter room ID">
+  <div class="videos">
 
-    <button onclick="join()">Join</button>
+    <div class="video-box">
+      <video id="localVideo" autoplay muted playsinline></video>
+      <canvas id="canvas"></canvas>
+      <p id="myGesture">Your Gesture: -</p>
+    </div>
+
+    <div class="video-box">
+      <video id="remoteVideo" autoplay playsinline></video>
+      <p id="remoteGesture">Remote: -</p>
+    </div>
+
   </div>
 
+  <div class="controls">
+    <button class="start" onclick="startCall()">Start Call</button>
+    <button class="end" onclick="endCall()">End Call</button>
 
-  <!-- MAIN APP -->
-  <div id="main" class="hidden">
+    <button class="start" onclick="startGesture()">Start Gesture</button>
+    <button class="end" onclick="stopGesture()">End Gesture</button>
+  </div>
 
-    <!-- LEFT SIDE (VIDEO + CONTROLS) -->
-    <div class="left">
+  <div id="chat">
+    <div id="messages"></div>
 
-      <div class="videos">
+    <input id="msg" placeholder="Message">
+    <button onclick="sendMsg()">Send</button>
 
-        <!-- LOCAL VIDEO -->
-        <div class="video-box">
-          <video id="localVideo" autoplay muted playsinline></video>
-          <canvas id="canvas"></canvas>
-          <p id="myGesture">Your Gesture: -</p>
-        </div>
-
-        <!-- REMOTE VIDEO -->
-        <div class="video-box">
-          <video id="remoteVideo" autoplay playsinline></video>
-          <p id="remoteGesture">Remote: -</p>
-        </div>
-
-      </div>
-
-      <div class="controls">
-        <button onclick="startCall()">Start Call</button>
-        <button onclick="startGesture()">Start Gesture</button>
-      </div>
-
-    </div>
-
-
-    <!-- RIGHT SIDE (CHAT) -->
-    <div class="right">
-
-      <div id="messages"></div>
-
-      <div class="chat-input">
-        <input id="msg" type="text" placeholder="Type message...">
-        <button onclick="sendMsg()">Send</button>
-      </div>
-
-      <div class="file-box">
-        <input type="file" id="file">
-        <button onclick="sendFile()">Send File</button>
-      </div>
-
-    </div>
-
+    <input type="file" id="file">
+    <button onclick="sendFile()">Send File</button>
   </div>
 
 </div>
-
-
-<!-- HIDDEN VIDEO (GESTURE ONLY) -->
-<video id="gestureVideo" autoplay muted playsinline style="display:none;"></video>
-
 
 <script src="script.js"></script>
 

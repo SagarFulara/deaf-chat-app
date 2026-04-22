@@ -8,7 +8,8 @@ let name, room;
 let pc;
 let localStream;
 let isGestureRunning = false;
-let hands = null; // Lazy init fix
+let hands = null;
+let animFrameId = null; // BUG 4 FIX: track frame ID so we can cancel it
 
 // ELEMENTS
 const localVideo = document.getElementById("localVideo");
@@ -18,8 +19,9 @@ const ctx = canvas.getContext("2d");
 
 // ================= JOIN =================
 function join() {
-  name = document.getElementById("name").value;
-  room = document.getElementById("room").value;
+  name = document.getElementById("name").value.trim();
+  room = document.getElementById("room").value.trim();
+  if (!name || !room) { alert("Enter name and room!"); return; }
 
   socket.emit("set-username", name);
   socket.emit("join-room", room);
@@ -43,7 +45,11 @@ socket.on("chat-message", (d) => {
 });
 
 function addMsg(m) {
-  document.getElementById("messages").innerHTML += `<p>${m}</p>`;
+  const p = document.createElement("p");
+  p.textContent = m;
+  const msgs = document.getElementById("messages");
+  msgs.appendChild(p);
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
 // ================= VIDEO CALL =================
@@ -52,13 +58,13 @@ async function startCall() {
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   });
 
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  localVideo.srcObject = localStream;
+  if (!localStream) {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
+  }
 
   localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
   pc.ontrack = e => { remoteVideo.srcObject = e.streams[0]; };
-
   pc.onicecandidate = e => {
     if (e.candidate) socket.emit("candidate", { room, candidate: e.candidate });
   };
@@ -73,13 +79,13 @@ socket.on("offer", async (offer) => {
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   });
 
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  localVideo.srcObject = localStream;
+  if (!localStream) {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
+  }
 
   localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
   pc.ontrack = e => { remoteVideo.srcObject = e.streams[0]; };
-
   pc.onicecandidate = e => {
     if (e.candidate) socket.emit("candidate", { room, candidate: e.candidate });
   };
@@ -100,20 +106,18 @@ socket.on("candidate", async (c) => {
 
 function endCall() {
   if (pc) { pc.close(); pc = null; }
-  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   localVideo.srcObject = null;
   remoteVideo.srcObject = null;
 }
 
-// ================= GESTURE =================
-
+// ================= GESTURE - INIT MEDIAPIPE =================
 function initHands() {
-  // FIX 3: Lazy init — only create Hands after MediaPipe is confirmed loaded
-  if (hands) return;
+  if (hands) return true; // already initialised
 
   if (typeof Hands === "undefined") {
-    alert("MediaPipe failed to load. Check your internet connection.");
-    return;
+    alert("MediaPipe failed to load. Check your internet connection and refresh.");
+    return false; // BUG 1 FIX: return false so caller knows it failed
   }
 
   hands = new Hands({
@@ -123,86 +127,107 @@ function initHands() {
   hands.setOptions({
     maxNumHands: 1,
     minDetectionConfidence: 0.6,
-    minTrackingConfidence: 0.6
+    minTrackingConfidence: 0.6,
+    modelComplexity: 1  // BUG 3 FIX: missing in old script.js — needed for reliable detection
   });
 
-  hands.onResults((res) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (!res.multiHandLandmarks || res.multiHandLandmarks.length === 0) {
-      document.getElementById("myGesture").innerText = "No Hand ❌";
-      return;
-    }
-
-    const l = res.multiHandLandmarks[0];
-
-    drawConnectors(ctx, l, HAND_CONNECTIONS);
-    drawLandmarks(ctx, l);
-
-    let text = "Detecting...";
-
-    if (
-      l[8].y < l[6].y &&
-      l[12].y < l[10].y &&
-      l[16].y < l[14].y &&
-      l[20].y < l[18].y
-    ) {
-      text = "Hello ✋";
-    } else if (l[4].y < l[3].y) {
-      text = "Yes 👍";
-    } else {
-      text = "No 👊";
-    }
-
-    document.getElementById("myGesture").innerText = text;
-    socket.emit("gesture", { room, text });
-  });
+  hands.onResults(onHandResults);
+  return true; // BUG 1 FIX: return true on success
 }
 
-socket.on("gesture", (d) => {
-  document.getElementById("remoteGesture").innerText = d.sender + ": " + d.text;
-});
+// ================= GESTURE - RESULTS HANDLER =================
+function onHandResults(res) {
+  // Sync canvas size to actual video every frame
+  if (localVideo.videoWidth > 0) {
+    canvas.width  = localVideo.videoWidth;
+    canvas.height = localVideo.videoHeight;
+  }
 
-// ================= START GESTURE =================
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!res.multiHandLandmarks || res.multiHandLandmarks.length === 0) {
+    document.getElementById("myGesture").innerText = "No Hand ❌";
+    return;
+  }
+
+  const l = res.multiHandLandmarks[0];
+
+  drawConnectors(ctx, l, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 3 });
+  drawLandmarks(ctx, l, { color: "#FF0000", lineWidth: 2, radius: 4 });
+
+  // Gesture detection
+  const allFingersUp =
+    l[8].y  < l[6].y  &&
+    l[12].y < l[10].y &&
+    l[16].y < l[14].y &&
+    l[20].y < l[18].y;
+
+  const thumbUp   = l[4].y < l[3].y && l[4].y < l[2].y;
+  const thumbDown = l[4].y > l[3].y && l[4].y > l[2].y;
+  const indexUp   = l[8].y < l[6].y;
+  const middleUp  = l[12].y < l[10].y;
+  const ringDown  = l[16].y > l[14].y;
+  const pinkyDown = l[20].y > l[18].y;
+
+  let text = "Detecting... 👀";
+
+  if (allFingersUp)                                           text = "Hello ✋";
+  else if (thumbUp && !indexUp)                              text = "Yes 👍";
+  else if (thumbDown && !indexUp)                            text = "No 👎";
+  else if (indexUp && middleUp && ringDown && pinkyDown)     text = "Peace ✌️";
+  else if (indexUp && !middleUp && ringDown && pinkyDown)    text = "Pointing ☝️";
+  else if (!indexUp && !middleUp && !ringDown && !pinkyDown) text = "Fist ✊";
+
+  document.getElementById("myGesture").innerText = text;
+
+  if (text !== "Detecting... 👀") {
+    socket.emit("gesture", { room, text });
+  }
+}
+
+// ================= GESTURE - START =================
 async function startGesture() {
   if (isGestureRunning) return;
 
-  // Get camera if not already running
   if (!localStream) {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true });
-    localVideo.srcObject = localStream;
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      localVideo.srcObject = localStream;
+    } catch (e) {
+      alert("Camera access denied!");
+      return;
+    }
   }
 
-  // FIX 1: Wait for video metadata to load before reading dimensions
+  document.getElementById("myGesture").innerText = "Starting... ⏳";
+
+  // BUG 2 FIX: Poll until video has real pixel dimensions (loadedmetadata alone is not enough)
   await new Promise((resolve) => {
-    if (localVideo.readyState >= 1) {
-      resolve();
-    } else {
-      localVideo.addEventListener("loadedmetadata", resolve, { once: true });
+    function check() {
+      if (localVideo.videoWidth > 0 && localVideo.videoHeight > 0) {
+        resolve();
+      } else {
+        setTimeout(check, 100);
+      }
     }
+    check();
   });
 
-  // Now dimensions are available
-  canvas.width = localVideo.videoWidth || 320;
-  canvas.height = localVideo.videoHeight || 240;
+  canvas.width  = localVideo.videoWidth;
+  canvas.height = localVideo.videoHeight;
 
-  // FIX 3: Init MediaPipe lazily here
-  initHands();
-  if (!hands) return;
+  if (!initHands()) return; // BUG 1 FIX: initHands now returns true/false
 
   isGestureRunning = true;
+  document.getElementById("myGesture").innerText = "Show your hand! 🖐";
   runGesture();
 }
 
-// ================= GESTURE LOOP =================
+// ================= GESTURE - LOOP =================
 async function runGesture() {
   if (!isGestureRunning) return;
 
-  // FIX 2: Only send if video is actually playing and has valid size
-  if (
-    localVideo.readyState === 4 &&
-    localVideo.videoWidth > 0
-  ) {
+  if (localVideo.readyState === 4 && localVideo.videoWidth > 0) {
     try {
       await hands.send({ image: localVideo });
     } catch (e) {
@@ -210,14 +235,24 @@ async function runGesture() {
     }
   }
 
-  requestAnimationFrame(runGesture);
+  animFrameId = requestAnimationFrame(runGesture); // BUG 4 FIX: store ID
 }
 
+// ================= GESTURE - STOP =================
 function stopGesture() {
   isGestureRunning = false;
+  if (animFrameId) {
+    cancelAnimationFrame(animFrameId); // BUG 4 FIX: actually cancel the loop
+    animFrameId = null;
+  }
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   document.getElementById("myGesture").innerText = "Your Gesture: -";
 }
+
+// RECEIVE REMOTE GESTURE
+socket.on("gesture", (d) => {
+  document.getElementById("remoteGesture").innerText = d.sender + ": " + d.text;
+});
 
 // ================= FILE =================
 function sendFile() {

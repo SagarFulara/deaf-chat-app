@@ -32,7 +32,6 @@ function join() {
 // ================= CHAT =================
 function sendMsg() {
   const msg = document.getElementById("msg").value;
-
   if (!msg) return;
 
   socket.emit("chat-message", { user: name, room, msg });
@@ -150,7 +149,6 @@ function endCall() {
 
 // ================= GESTURE =================
 
-// CHECK
 if (typeof Hands === "undefined") {
   console.log("❌ MediaPipe not loaded");
 }
@@ -166,6 +164,8 @@ hands.setOptions({
 });
 
 hands.onResults((res) => {
+
+  console.log("RESULTS CALLED");
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -205,7 +205,7 @@ socket.on("gesture", (d) => {
     d.sender + ": " + d.text;
 });
 
-// START GESTURE
+// ================= RUN GESTURE LOOP =================
 async function startGesture() {
 
   if (!localStream) {
@@ -223,13 +223,17 @@ async function startGesture() {
   runGesture();
 }
 
-// LOOP
+// LOOP (UPDATED FIXED VERSION)
 async function runGesture() {
 
   if (!isGestureRunning) return;
 
-  if (localVideo.readyState >= 2) {
-    await hands.send({ image: localVideo });
+  try {
+    await hands.send({
+      image: localVideo
+    });
+  } catch (e) {
+    console.log("ERROR:", e);
   }
 
   requestAnimationFrame(runGesture);

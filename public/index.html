@@ -1,11 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deaf Chat</title>
+
   <link rel="stylesheet" href="style.css">
 
   <script src="/socket.io/socket.io.js"></script>
 
+  <!-- MediaPipe -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
@@ -15,56 +19,73 @@
 
 <div class="app">
 
-  <!-- LOGIN -->
-  <div id="login">
+  <!-- LOGIN SCREEN -->
+  <div id="login" class="center">
     <h2>Deaf Chat</h2>
-    <input id="name" placeholder="Your Name">
-    <input id="room" placeholder="Room ID">
+
+    <input id="name" type="text" placeholder="Enter your name">
+    <input id="room" type="text" placeholder="Enter room ID">
+
     <button onclick="join()">Join</button>
   </div>
 
-  <!-- MAIN -->
+
+  <!-- MAIN APP -->
   <div id="main" class="hidden">
 
-    <!-- LEFT -->
+    <!-- LEFT SIDE (VIDEO + CONTROLS) -->
     <div class="left">
+
       <div class="videos">
+
+        <!-- LOCAL VIDEO -->
         <div class="video-box">
           <video id="localVideo" autoplay muted playsinline></video>
           <canvas id="canvas"></canvas>
-          <p id="myGesture">-</p>
+          <p id="myGesture">Your Gesture: -</p>
         </div>
 
+        <!-- REMOTE VIDEO -->
         <div class="video-box">
           <video id="remoteVideo" autoplay playsinline></video>
-          <p id="remoteGesture">-</p>
+          <p id="remoteGesture">Remote: -</p>
         </div>
+
       </div>
 
       <div class="controls">
-        <button onclick="startCall()">Call</button>
-        <button onclick="startGesture()">Gesture</button>
+        <button onclick="startCall()">Start Call</button>
+        <button onclick="startGesture()">Start Gesture</button>
       </div>
+
     </div>
 
-    <!-- RIGHT -->
+
+    <!-- RIGHT SIDE (CHAT) -->
     <div class="right">
+
       <div id="messages"></div>
 
       <div class="chat-input">
-        <input id="msg">
+        <input id="msg" type="text" placeholder="Type message...">
         <button onclick="sendMsg()">Send</button>
       </div>
 
-      <input type="file" id="file">
-      <button onclick="sendFile()">Send File</button>
+      <div class="file-box">
+        <input type="file" id="file">
+        <button onclick="sendFile()">Send File</button>
+      </div>
+
     </div>
 
   </div>
 
 </div>
 
-<video id="gestureVideo" autoplay muted playsinline style="display:none"></video>
+
+<!-- HIDDEN VIDEO (GESTURE ONLY) -->
+<video id="gestureVideo" autoplay muted playsinline style="display:none;"></video>
+
 
 <script src="script.js"></script>
 

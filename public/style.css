@@ -1,43 +1,63 @@
-body {
+* {
   margin: 0;
-  font-family: 'Segoe UI';
-  background: #0f172a;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0f172a, #020617);
   color: white;
 }
 
+/* APP CONTAINER */
 .app {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  width: 100%;
   height: 100vh;
 }
 
 /* LOGIN */
-#login {
+.center {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
 }
 
-#login input {
+.center h2 {
+  margin-bottom: 10px;
+}
+
+.center input {
   padding: 10px;
-  border-radius: 6px;
+  width: 240px;
+  border-radius: 8px;
   border: none;
+  outline: none;
+  background: #1e293b;
+  color: white;
 }
 
 button {
-  padding: 10px;
+  padding: 10px 16px;
   border: none;
+  border-radius: 8px;
   background: #38bdf8;
+  color: black;
   cursor: pointer;
-  border-radius: 6px;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #0ea5e9;
 }
 
 /* MAIN */
 #main {
   display: flex;
-  width: 90%;
-  height: 90%;
+  height: 100vh;
 }
 
 .hidden {
@@ -47,55 +67,141 @@ button {
 /* LEFT SIDE */
 .left {
   width: 60%;
+  padding: 15px;
   display: flex;
   flex-direction: column;
 }
 
+/* VIDEO AREA */
 .videos {
   display: flex;
-  gap: 10px;
+  gap: 12px;
+  flex: 1;
 }
 
 .video-box {
   position: relative;
   width: 50%;
+  background: #020617;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 video {
   width: 100%;
-  border-radius: 10px;
+  height: 100%;
+  object-fit: cover;
 }
 
+/* CANVAS OVERLAY */
 canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
+/* GESTURE TEXT */
+.video-box p {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  background: rgba(0,0,0,0.6);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* CONTROLS */
 .controls {
-  margin-top: 10px;
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
 }
 
 /* RIGHT SIDE */
 .right {
   width: 40%;
+  padding: 15px;
   display: flex;
   flex-direction: column;
 }
 
+/* CHAT BOX */
 #messages {
   flex: 1;
-  overflow-y: auto;
   background: #1e293b;
-  padding: 10px;
-  border-radius: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  overflow-y: auto;
 }
 
+/* CHAT MESSAGE */
+#messages p {
+  margin-bottom: 8px;
+  background: #334155;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+/* INPUT */
 .chat-input {
   display: flex;
+  margin-top: 10px;
 }
 
 .chat-input input {
   flex: 1;
+  padding: 10px;
+  border-radius: 8px 0 0 8px;
+  border: none;
+  outline: none;
+}
+
+.chat-input button {
+  border-radius: 0 8px 8px 0;
+}
+
+/* FILE */
+.file-box {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.file-box input {
+  flex: 1;
+}
+
+/* SCROLLBAR */
+#messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+#messages::-webkit-scrollbar-thumb {
+  background: #38bdf8;
+  border-radius: 10px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  #main {
+    flex-direction: column;
+  }
+
+  .left, .right {
+    width: 100%;
+    height: 50%;
+  }
+
+  .videos {
+    flex-direction: column;
+  }
+
+  .video-box {
+    width: 100%;
+    height: 50%;
+  }
 }

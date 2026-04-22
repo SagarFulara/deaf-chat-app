@@ -7,9 +7,9 @@ let camera;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+const gestureVideo = document.getElementById("gestureVideo");
 
+// LOGIN
 function login() {
     username = document.getElementById("username").value;
     room = document.getElementById("roomId").value;
@@ -19,6 +19,7 @@ function login() {
 
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("chatBox").style.display = "block";
+
     document.getElementById("userLabel").innerText = username;
     document.getElementById("roomLabel").innerText = room;
 }
@@ -44,7 +45,7 @@ function addMessage(text) {
     document.getElementById("messages").innerHTML += "<p>" + text + "</p>";
 }
 
-// VIDEO
+// VIDEO CALL
 async function startCall() {
     pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
@@ -84,6 +85,7 @@ socket.on("offer", async (offer) => {
     };
 
     await pc.setRemoteDescription(offer);
+
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
@@ -102,54 +104,85 @@ function endCall() {
     if (pc) pc.close();
 }
 
-// ===== MEDIA PIPE GESTURE =====
+// ===== MEDIA PIPE HAND GESTURE =====
 const hands = new Hands({
     locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
 });
 
 hands.setOptions({
     maxNumHands: 1,
-    minDetectionConfidence: 0.7
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence: 0.7
 });
 
 hands.onResults(onResults);
 
+// SIMPLE DETECTION
 function detectGesture(l) {
     if (l[8].y < l[6].y) return {en:"Hello ✋", hi:"नमस्ते"};
     if (l[4].y < l[8].y) return {en:"Yes 👍", hi:"हाँ"};
     if (l[4].y > l[8].y) return {en:"No 👎", hi:"नहीं"};
-    return {en:"Detecting", hi:"पहचान"};
+    return {en:"Detecting...", hi:"पहचान"};
 }
 
-function onResults(res) {
-    ctx.clearRect(0,0,300,200);
+// RESULTS
+function onResults(results) {
 
-    if (res.multiHandLandmarks.length > 0) {
-        const g = detectGesture(res.multiHandLandmarks[0]);
-
-        document.getElementById("myGesture").innerText =
-            `Your: ${g.en} (${g.hi})`;
-
-        socket.emit("gesture", {
-            roomId: room,
-            gesture: `${g.en} (${g.hi})`
-        });
+    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+        document.getElementById("myGesture").innerText = "No Hand ❌";
+        return;
     }
+
+    const l = results.multiHandLandmarks[0];
+
+    console.log("Hand detected ✅");
+
+    const g = detectGesture(l);
+
+    document.getElementById("myGesture").innerText =
+        `Your: ${g.en} (${g.hi})`;
+
+    socket.emit("gesture", {
+        roomId: room,
+        gesture: `${g.en} (${g.hi})`
+    });
 }
 
-function startGesture() {
-    camera = new Camera(localVideo, {
+// START GESTURE (SEPARATE CAMERA)
+async function startGesture() {
+    if (camera) return;
+
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+    gestureVideo.srcObject = stream;
+
+    camera = new Camera(gestureVideo, {
         onFrame: async () => {
-            await hands.send({ image: localVideo });
+            await hands.send({ image: gestureVideo });
         },
         width: 300,
         height: 200
     });
+
     camera.start();
+
+    document.getElementById("myGesture").innerText = "Gesture Started ✅";
 }
 
+// STOP
 function stopGesture() {
-    if (camera) camera.stop();
+    if (camera) {
+        camera.stop();
+        camera = null;
+    }
+
+    if (gestureVideo.srcObject) {
+        gestureVideo.srcObject.getTracks().forEach(track => track.stop());
+    }
+
+    gestureVideo.srcObject = null;
+
+    document.getElementById("myGesture").innerText = "Stopped ❌";
 }
 
 // RECEIVE GESTURE
@@ -160,7 +193,7 @@ socket.on("gesture", (data) => {
     }
 });
 
-// FILE
+// FILE TRANSFER
 function sendFile() {
     const file = document.getElementById("fileInput").files[0];
     const reader = new FileReader();

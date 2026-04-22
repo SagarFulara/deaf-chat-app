@@ -4,13 +4,11 @@
     <title>Deaf Chat AI</title>
     <link rel="stylesheet" href="style.css">
 
-    <!-- Socket -->
     <script src="/socket.io/socket.io.js"></script>
 
     <!-- MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 </head>
 <body>
 
@@ -39,7 +37,6 @@
 
 <input type="file" id="fileInput">
 <button onclick="sendFile()">Send File</button>
-<p id="fileStatus"></p>
 
 <hr>
 
@@ -49,20 +46,22 @@
 <br><br>
 
 <button onclick="startGesture()">Start Gesture</button>
-<button onclick="stopGesture()">End Gesture</button>
+<button onclick="stopGesture()">Stop Gesture</button>
 
 <div class="video-area">
     <div>
-        <video id="localVideo" autoplay muted></video>
-        <canvas id="canvas"></canvas>
+        <video id="localVideo" autoplay muted playsinline></video>
         <p id="myGesture">Your Gesture: -</p>
     </div>
 
     <div>
-        <video id="remoteVideo" autoplay></video>
+        <video id="remoteVideo" autoplay playsinline></video>
         <p id="remoteGesture">Their Gesture: -</p>
     </div>
 </div>
+
+<!-- 🔥 HIDDEN VIDEO FOR GESTURE -->
+<video id="gestureVideo" autoplay muted playsinline style="display:none;"></video>
 
 </div>
 </div>

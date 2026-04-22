@@ -3,8 +3,8 @@ const socket = io();
 let name, room;
 let pc;
 let localStream;
-let camera;
 let isCallStarted = false;
+let isGestureRunning = false;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
@@ -15,7 +15,7 @@ const ctx = canvas.getContext("2d");
 canvas.width = 300;
 canvas.height = 200;
 
-// JOIN
+// ================= JOIN =================
 function join() {
   name = document.getElementById("name").value;
   room = document.getElementById("room").value;
@@ -32,7 +32,6 @@ function sendMsg() {
   const msg = document.getElementById("msg").value;
 
   socket.emit("chat-message", { user: name, room, msg });
-
   addMsg("You: " + msg);
 }
 
@@ -44,7 +43,7 @@ function addMsg(m) {
   document.getElementById("messages").innerHTML += `<p>${m}</p>`;
 }
 
-// ================= VIDEO =================
+// ================= VIDEO CALL =================
 async function startCall() {
 
   if (isCallStarted) return;
@@ -63,7 +62,9 @@ async function startCall() {
 
   localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-  pc.ontrack = (e) => remoteVideo.srcObject = e.streams[0];
+  pc.ontrack = (e) => {
+    remoteVideo.srcObject = e.streams[0];
+  };
 
   pc.onicecandidate = (e) => {
     if (e.candidate) {
@@ -92,7 +93,9 @@ socket.on("offer", async (offer) => {
 
   localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-  pc.ontrack = (e) => remoteVideo.srcObject = e.streams[0];
+  pc.ontrack = (e) => {
+    remoteVideo.srcObject = e.streams[0];
+  };
 
   pc.onicecandidate = (e) => {
     if (e.candidate) {
@@ -100,7 +103,7 @@ socket.on("offer", async (offer) => {
     }
   };
 
-  await pc.setRemoteDescription(offer);
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
 
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
@@ -109,11 +112,15 @@ socket.on("offer", async (offer) => {
 });
 
 socket.on("answer", async (ans) => {
-  await pc.setRemoteDescription(ans);
+  await pc.setRemoteDescription(new RTCSessionDescription(ans));
 });
 
 socket.on("candidate", async (c) => {
-  await pc.addIceCandidate(new RTCIceCandidate(c));
+  try {
+    await pc.addIceCandidate(new RTCIceCandidate(c));
+  } catch (e) {
+    console.error(e);
+  }
 });
 
 function endCall() {
@@ -126,13 +133,20 @@ function endCall() {
   isCallStarted = false;
 }
 
-// ================= GESTURE =================
+// ================= GESTURE (FIXED) =================
+
+// MediaPipe init
 const hands = new Hands({
   locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
 });
 
-hands.setOptions({ maxNumHands: 1 });
+hands.setOptions({
+  maxNumHands: 1,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.7
+});
 
+// RESULT
 hands.onResults((res) => {
 
   ctx.clearRect(0,0,300,200);
@@ -147,16 +161,27 @@ hands.onResults((res) => {
   drawConnectors(ctx, l, HAND_CONNECTIONS);
   drawLandmarks(ctx, l);
 
-  let text = "Detecting";
+  let text = "Detecting...";
 
+  // OPEN HAND
   if (
     l[8].y < l[6].y &&
     l[12].y < l[10].y &&
     l[16].y < l[14].y &&
     l[20].y < l[18].y
-  ) text = "Hello ✋";
-  else if (l[4].y < l[3].y) text = "Yes 👍";
-  else text = "No 👊";
+  ) {
+    text = "Hello ✋";
+  }
+
+  // THUMB UP
+  else if (l[4].y < l[3].y) {
+    text = "Yes 👍";
+  }
+
+  // FIST
+  else {
+    text = "No 👊";
+  }
 
   document.getElementById("myGesture").innerText = text;
 
@@ -168,6 +193,7 @@ socket.on("gesture", (d) => {
     d.sender + ": " + d.text;
 });
 
+// START GESTURE
 async function startGesture() {
 
   if (!localStream) {
@@ -175,19 +201,23 @@ async function startGesture() {
     localVideo.srcObject = localStream;
   }
 
-  camera = new Camera(localVideo, {
-    onFrame: async () => {
-      await hands.send({ image: localVideo });
-    },
-    width: 300,
-    height: 200
-  });
-
-  camera.start();
+  isGestureRunning = true;
+  runGesture();
 }
 
+// STOP
 function stopGesture() {
-  if (camera) camera.stop();
+  isGestureRunning = false;
+}
+
+// LOOP
+async function runGesture() {
+
+  if (!isGestureRunning) return;
+
+  await hands.send({ image: localVideo });
+
+  requestAnimationFrame(runGesture);
 }
 
 // ================= FILE =================

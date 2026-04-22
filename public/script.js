@@ -12,10 +12,10 @@ const remoteVideo = document.getElementById("remoteVideo");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-canvas.width = 300;
-canvas.height = 200;
+canvas.width = 320;
+canvas.height = 240;
 
-// ================= JOIN =================
+// JOIN
 function join() {
   name = document.getElementById("name").value;
   room = document.getElementById("room").value;
@@ -27,23 +27,20 @@ function join() {
   document.getElementById("main").style.display = "block";
 }
 
-// ================= CHAT =================
+// CHAT
 function sendMsg() {
   const msg = document.getElementById("msg").value;
-
   socket.emit("chat-message", { user: name, room, msg });
   addMsg("You: " + msg);
 }
 
-socket.on("chat-message", (d) => {
-  addMsg(d.user + ": " + d.msg);
-});
+socket.on("chat-message", d => addMsg(d.user + ": " + d.msg));
 
 function addMsg(m) {
   document.getElementById("messages").innerHTML += `<p>${m}</p>`;
 }
 
-// ================= VIDEO CALL =================
+// VIDEO CALL
 async function startCall() {
 
   if (isCallStarted) return;
@@ -60,16 +57,12 @@ async function startCall() {
 
   localVideo.srcObject = localStream;
 
-  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
-  pc.ontrack = (e) => {
-    remoteVideo.srcObject = e.streams[0];
-  };
+  pc.ontrack = e => remoteVideo.srcObject = e.streams[0];
 
-  pc.onicecandidate = (e) => {
-    if (e.candidate) {
-      socket.emit("candidate", { room, candidate: e.candidate });
-    }
+  pc.onicecandidate = e => {
+    if (e.candidate) socket.emit("candidate", { room, candidate: e.candidate });
   };
 
   const offer = await pc.createOffer();
@@ -78,7 +71,7 @@ async function startCall() {
   socket.emit("offer", { room, offer });
 }
 
-socket.on("offer", async (offer) => {
+socket.on("offer", async offer => {
 
   pc = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
@@ -91,19 +84,15 @@ socket.on("offer", async (offer) => {
 
   localVideo.srcObject = localStream;
 
-  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
-  pc.ontrack = (e) => {
-    remoteVideo.srcObject = e.streams[0];
+  pc.ontrack = e => remoteVideo.srcObject = e.streams[0];
+
+  pc.onicecandidate = e => {
+    if (e.candidate) socket.emit("candidate", { room, candidate: e.candidate });
   };
 
-  pc.onicecandidate = (e) => {
-    if (e.candidate) {
-      socket.emit("candidate", { room, candidate: e.candidate });
-    }
-  };
-
-  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  await pc.setRemoteDescription(offer);
 
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
@@ -111,17 +100,8 @@ socket.on("offer", async (offer) => {
   socket.emit("answer", { room, answer });
 });
 
-socket.on("answer", async (ans) => {
-  await pc.setRemoteDescription(new RTCSessionDescription(ans));
-});
-
-socket.on("candidate", async (c) => {
-  try {
-    await pc.addIceCandidate(new RTCIceCandidate(c));
-  } catch (e) {
-    console.error(e);
-  }
-});
+socket.on("answer", ans => pc.setRemoteDescription(ans));
+socket.on("candidate", c => pc.addIceCandidate(new RTCIceCandidate(c)));
 
 function endCall() {
   if (pc) pc.close();
@@ -129,27 +109,19 @@ function endCall() {
 
   localVideo.srcObject = null;
   remoteVideo.srcObject = null;
-
   isCallStarted = false;
 }
 
-// ================= GESTURE (FIXED) =================
-
-// MediaPipe init
+// GESTURE (FINAL FIX)
 const hands = new Hands({
   locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
 });
 
-hands.setOptions({
-  maxNumHands: 1,
-  minDetectionConfidence: 0.7,
-  minTrackingConfidence: 0.7
-});
+hands.setOptions({ maxNumHands: 1 });
 
-// RESULT
-hands.onResults((res) => {
+hands.onResults(res => {
 
-  ctx.clearRect(0,0,300,200);
+  ctx.clearRect(0,0,320,240);
 
   if (!res.multiHandLandmarks || res.multiHandLandmarks.length === 0) {
     document.getElementById("myGesture").innerText = "No Hand ❌";
@@ -161,39 +133,22 @@ hands.onResults((res) => {
   drawConnectors(ctx, l, HAND_CONNECTIONS);
   drawLandmarks(ctx, l);
 
-  let text = "Detecting...";
+  let text = "Detecting";
 
-  // OPEN HAND
-  if (
-    l[8].y < l[6].y &&
-    l[12].y < l[10].y &&
-    l[16].y < l[14].y &&
-    l[20].y < l[18].y
-  ) {
-    text = "Hello ✋";
-  }
-
-  // THUMB UP
-  else if (l[4].y < l[3].y) {
-    text = "Yes 👍";
-  }
-
-  // FIST
-  else {
-    text = "No 👊";
-  }
+  if (l[8].y < l[6].y) text = "Hello ✋";
+  else if (l[4].y < l[3].y) text = "Yes 👍";
+  else text = "No 👊";
 
   document.getElementById("myGesture").innerText = text;
 
   socket.emit("gesture", { room, text });
 });
 
-socket.on("gesture", (d) => {
+socket.on("gesture", d => {
   document.getElementById("remoteGesture").innerText =
     d.sender + ": " + d.text;
 });
 
-// START GESTURE
 async function startGesture() {
 
   if (!localStream) {
@@ -201,47 +156,45 @@ async function startGesture() {
     localVideo.srcObject = localStream;
   }
 
+  await localVideo.play();
+
+  // 🔥 delay fix
+  await new Promise(r => setTimeout(r, 1000));
+
   isGestureRunning = true;
   runGesture();
 }
 
-// STOP
 function stopGesture() {
   isGestureRunning = false;
 }
 
-// LOOP
 async function runGesture() {
-
   if (!isGestureRunning) return;
 
-  await hands.send({ image: localVideo });
+  if (localVideo.readyState >= 2) {
+    await hands.send({ image: localVideo });
+  }
 
   requestAnimationFrame(runGesture);
 }
 
-// ================= FILE =================
+// FILE
 function sendFile() {
-
   const f = document.getElementById("file").files[0];
   const reader = new FileReader();
 
   reader.onload = () => {
-    socket.emit("file", {
-      room,
-      name: f.name,
-      data: reader.result
-    });
+    socket.emit("file", { room, name: f.name, data: reader.result });
   };
 
   reader.readAsDataURL(f);
 }
 
-socket.on("file", (d) => {
+socket.on("file", d => {
   const a = document.createElement("a");
   a.href = d.data;
   a.download = d.name;
   a.innerText = "Download " + d.name;
-
   document.getElementById("messages").appendChild(a);
 });

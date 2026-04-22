@@ -5,8 +5,8 @@
 }
 
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: linear-gradient(135deg, #020617, #0f172a);
+  font-family: Arial;
+  background: #0f172a;
   color: white;
 }
 
@@ -20,44 +20,39 @@ body {
   gap: 15px;
 }
 
-#login h2 {
-  font-size: 28px;
-  margin-bottom: 10px;
-}
-
 #login input {
   padding: 12px;
-  width: 240px;
+  width: 80%;
+  max-width: 300px;
   border-radius: 8px;
   border: none;
-  background: #1e293b;
-  color: white;
-  outline: none;
 }
 
-/* MAIN LAYOUT */
+#login button {
+  padding: 10px 20px;
+}
+
+/* MAIN */
 #main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 15px;
+  padding: 10px;
 }
 
 /* VIDEO SECTION */
 .videos {
   display: flex;
-  gap: 15px;
-  margin-bottom: 15px;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .video-box {
   position: relative;
-  width: 320px;
-  height: 240px;
-  background: #020617;
-  border-radius: 12px;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 4/3;
+  background: black;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 0 20px rgba(56,189,248,0.1);
 }
 
 video {
@@ -80,18 +75,25 @@ canvas {
   bottom: 8px;
   left: 10px;
   background: rgba(0,0,0,0.6);
-  padding: 5px 10px;
+  padding: 4px 10px;
   border-radius: 6px;
   font-size: 14px;
 }
 
-/* BUTTONS */
+/* CONTROLS */
+.controls {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 15px 0;
+}
+
 button {
-  padding: 10px 16px;
-  border-radius: 8px;
+  padding: 10px 14px;
   border: none;
+  border-radius: 8px;
   cursor: pointer;
-  transition: 0.2s;
 }
 
 .start {
@@ -99,80 +101,58 @@ button {
   color: white;
 }
 
-.start:hover {
-  background: #16a34a;
-}
-
 .end {
   background: #ef4444;
   color: white;
 }
 
-.end:hover {
-  background: #dc2626;
-}
-
-/* CONTROL BAR */
-.controls {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
 /* CHAT */
 #chat {
-  width: 400px;
+  width: 100%;
+  max-width: 500px;
+  margin: auto;
 }
 
 #messages {
   height: 180px;
   overflow-y: auto;
   background: #1e293b;
-  padding: 12px;
+  padding: 10px;
   border-radius: 10px;
   margin-bottom: 10px;
 }
 
-/* MESSAGE STYLE */
-#messages p {
-  background: #334155;
-  padding: 6px 10px;
-  border-radius: 8px;
-  margin-bottom: 6px;
-}
-
-/* INPUT */
-#chat input {
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
+/* INPUT GROUP */
+.chat-input, .file-input {
+  display: flex;
+  gap: 5px;
   margin-bottom: 8px;
 }
 
-/* FILE BUTTON */
-#chat button {
-  width: 100%;
+.chat-input input,
+.file-input input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
 }
 
-/* SCROLLBAR */
-#messages::-webkit-scrollbar {
-  width: 6px;
-}
+/* MOBILE OPTIMIZATION */
+@media (max-width: 600px) {
 
-#messages::-webkit-scrollbar-thumb {
-  background: #38bdf8;
-  border-radius: 10px;
-}
-
-/* RESPONSIVE */
-@media (max-width: 800px) {
-  .videos {
-    flex-direction: column;
-    align-items: center;
+  .video-box {
+    max-width: 100%;
   }
 
-  #chat {
-    width: 90%;
+  #messages {
+    height: 140px;
+  }
+
+  button {
+    width: 100%;
+  }
+
+  .chat-input, .file-input {
+    flex-direction: column;
   }
 }

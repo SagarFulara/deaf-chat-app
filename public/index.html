@@ -2,14 +2,18 @@
 <html>
 <head>
   <title>Deaf Chat</title>
+
+  <!-- IMPORTANT FOR RESPONSIVE -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <link rel="stylesheet" href="style.css">
 
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- MediaPipe -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
 
 <body>
@@ -49,11 +53,15 @@
   <div id="chat">
     <div id="messages"></div>
 
-    <input id="msg" placeholder="Message">
-    <button onclick="sendMsg()">Send</button>
+    <div class="chat-input">
+      <input id="msg" placeholder="Message">
+      <button onclick="sendMsg()">Send</button>
+    </div>
 
-    <input type="file" id="file">
-    <button onclick="sendFile()">Send File</button>
+    <div class="file-input">
+      <input type="file" id="file">
+      <button onclick="sendFile()">Send File</button>
+    </div>
   </div>
 
 </div>

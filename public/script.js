@@ -3,7 +3,6 @@ const socket = io();
 let name, room;
 let pc;
 let localStream;
-let isCallStarted = false;
 let isGestureRunning = false;
 
 const localVideo = document.getElementById("localVideo");
@@ -12,10 +11,7 @@ const remoteVideo = document.getElementById("remoteVideo");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-canvas.width = 320;
-canvas.height = 240;
-
-// JOIN
+// ================= JOIN =================
 function join() {
   name = document.getElementById("name").value;
   room = document.getElementById("room").value;
@@ -27,25 +23,8 @@ function join() {
   document.getElementById("main").style.display = "block";
 }
 
-// CHAT
-function sendMsg() {
-  const msg = document.getElementById("msg").value;
-  socket.emit("chat-message", { user: name, room, msg });
-  addMsg("You: " + msg);
-}
-
-socket.on("chat-message", d => addMsg(d.user + ": " + d.msg));
-
-function addMsg(m) {
-  document.getElementById("messages").innerHTML += `<p>${m}</p>`;
-}
-
-// VIDEO CALL
+// ================= VIDEO =================
 async function startCall() {
-
-  if (isCallStarted) return;
-  isCallStarted = true;
-
   pc = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   });
@@ -60,68 +39,30 @@ async function startCall() {
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
   pc.ontrack = e => remoteVideo.srcObject = e.streams[0];
-
-  pc.onicecandidate = e => {
-    if (e.candidate) socket.emit("candidate", { room, candidate: e.candidate });
-  };
-
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-
-  socket.emit("offer", { room, offer });
 }
 
-socket.on("offer", async offer => {
+// ================= GESTURE =================
 
-  pc = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-  });
-
-  localStream = await navigator.mediaDevices.getUserMedia({
-    video: true,
-    audio: true
-  });
-
-  localVideo.srcObject = localStream;
-
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
-  pc.ontrack = e => remoteVideo.srcObject = e.streams[0];
-
-  pc.onicecandidate = e => {
-    if (e.candidate) socket.emit("candidate", { room, candidate: e.candidate });
-  };
-
-  await pc.setRemoteDescription(offer);
-
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-
-  socket.emit("answer", { room, answer });
-});
-
-socket.on("answer", ans => pc.setRemoteDescription(ans));
-socket.on("candidate", c => pc.addIceCandidate(new RTCIceCandidate(c)));
-
-function endCall() {
-  if (pc) pc.close();
-  if (localStream) localStream.getTracks().forEach(t => t.stop());
-
-  localVideo.srcObject = null;
-  remoteVideo.srcObject = null;
-  isCallStarted = false;
+// SAFE CHECK
+if (typeof Hands === "undefined") {
+  alert("MediaPipe not loaded ❌");
 }
 
-// GESTURE (FINAL FIX)
+// INIT
 const hands = new Hands({
   locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
 });
 
-hands.setOptions({ maxNumHands: 1 });
+hands.setOptions({
+  maxNumHands: 1,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.7
+});
 
-hands.onResults(res => {
+// RESULT
+hands.onResults((res) => {
 
-  ctx.clearRect(0,0,320,240);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
   if (!res.multiHandLandmarks || res.multiHandLandmarks.length === 0) {
     document.getElementById("myGesture").innerText = "No Hand ❌";
@@ -133,22 +74,10 @@ hands.onResults(res => {
   drawConnectors(ctx, l, HAND_CONNECTIONS);
   drawLandmarks(ctx, l);
 
-  let text = "Detecting";
-
-  if (l[8].y < l[6].y) text = "Hello ✋";
-  else if (l[4].y < l[3].y) text = "Yes 👍";
-  else text = "No 👊";
-
-  document.getElementById("myGesture").innerText = text;
-
-  socket.emit("gesture", { room, text });
+  document.getElementById("myGesture").innerText = "HAND DETECTED ✅";
 });
 
-socket.on("gesture", d => {
-  document.getElementById("remoteGesture").innerText =
-    d.sender + ": " + d.text;
-});
-
+// START
 async function startGesture() {
 
   if (!localStream) {
@@ -158,43 +87,38 @@ async function startGesture() {
 
   await localVideo.play();
 
-  // 🔥 delay fix
-  await new Promise(r => setTimeout(r, 1000));
+  // 🔥 FORCE WAIT (CRITICAL)
+  await new Promise(r => setTimeout(r, 2000));
+
+  // 🔥 FIX CANVAS SIZE
+  canvas.width = localVideo.videoWidth;
+  canvas.height = localVideo.videoHeight;
 
   isGestureRunning = true;
+
   runGesture();
 }
 
+// STOP
 function stopGesture() {
   isGestureRunning = false;
 }
 
+// LOOP (ULTRA STABLE)
 async function runGesture() {
+
   if (!isGestureRunning) return;
 
-  if (localVideo.readyState >= 2) {
-    await hands.send({ image: localVideo });
+  if (localVideo.readyState === 4) {
+    try {
+      await hands.send({
+        image: localVideo,
+        timestamp: Date.now()
+      });
+    } catch (e) {
+      console.log("Gesture error:", e);
+    }
   }
 
   requestAnimationFrame(runGesture);
 }
-
-// FILE
-function sendFile() {
-  const f = document.getElementById("file").files[0];
-  const reader = new FileReader();
-
-  reader.onload = () => {
-    socket.emit("file", { room, name: f.name, data: reader.result });
-  };
-
-  reader.readAsDataURL(f);
-}
-
-socket.on("file", d => {
-  const a = document.createElement("a");
-  a.href = d.data;
-  a.download = d.name;
-  a.innerText = "Download " + d.name;
-  document.getElementById("messages").appendChild(a);
-});

@@ -1,166 +1,101 @@
-/* ===== GLOBAL ===== */
 body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #0f172a, #1e293b, #020617);
-    color: white;
+  margin: 0;
+  font-family: 'Segoe UI';
+  background: #0f172a;
+  color: white;
 }
 
-/* ===== CENTER CONTAINER ===== */
-.container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+.app {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
 }
 
-/* ===== MAIN CARD ===== */
-.card {
-    width: 75%;
-    max-width: 1000px;
-    padding: 25px;
-    border-radius: 15px;
-
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(12px);
-
-    box-shadow: 0 0 25px rgba(0,0,0,0.4);
+/* LOGIN */
+#login {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-/* ===== HEADINGS ===== */
-h1 {
-    text-align: center;
-    color: #38bdf8;
+#login input {
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
 }
 
-h3, h4 {
-    margin: 5px 0;
-}
-
-/* ===== INPUTS ===== */
-input {
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    outline: none;
-    margin: 5px;
-    width: 60%;
-}
-
-/* ===== BUTTONS ===== */
 button {
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    margin: 5px;
-    transition: 0.2s;
+  padding: 10px;
+  border: none;
+  background: #38bdf8;
+  cursor: pointer;
+  border-radius: 6px;
 }
 
-/* Button Colors */
-button:nth-child(3) { background: #22c55e; }   /* Join */
-button:hover {
-    transform: scale(1.05);
-    opacity: 0.9;
+/* MAIN */
+#main {
+  display: flex;
+  width: 90%;
+  height: 90%;
 }
 
-/* ===== CHAT BOX ===== */
-#messages {
-    height: 220px;
-    overflow-y: auto;
-    border-radius: 10px;
-    padding: 10px;
-
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.1);
+.hidden {
+  display: none;
 }
 
-/* Scrollbar */
-#messages::-webkit-scrollbar {
-    width: 6px;
-}
-#messages::-webkit-scrollbar-thumb {
-    background: #38bdf8;
-    border-radius: 10px;
+/* LEFT SIDE */
+.left {
+  width: 60%;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Chat text */
-#messages p {
-    background: rgba(255,255,255,0.05);
-    padding: 6px 10px;
-    border-radius: 6px;
-    margin: 5px 0;
+.videos {
+  display: flex;
+  gap: 10px;
 }
 
-/* ===== FILE STATUS ===== */
-#fileStatus {
-    font-size: 12px;
-    color: #94a3b8;
+.video-box {
+  position: relative;
+  width: 50%;
 }
 
-/* ===== VIDEO AREA ===== */
-.video-area {
-    display: flex;
-    justify-content: space-between;
-    gap: 20px;
-    margin-top: 20px;
-}
-
-/* Video containers */
-.video-area > div {
-    position: relative;
-    width: 48%;
-}
-
-/* Video style */
 video {
-    width: 100%;
-    border-radius: 12px;
-    border: 2px solid #38bdf8;
-    box-shadow: 0 0 15px rgba(56,189,248,0.4);
+  width: 100%;
+  border-radius: 10px;
 }
 
-/* Canvas overlay */
 canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    border-radius: 12px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
 }
 
-/* ===== GESTURE TEXT ===== */
-#myGesture, #remoteGesture {
-    text-align: center;
-    margin-top: 5px;
-    font-weight: bold;
-    color: #22c55e;
+.controls {
+  margin-top: 10px;
 }
 
-/* ===== BUTTON GROUP ===== */
-hr {
-    border: none;
-    height: 1px;
-    background: rgba(255,255,255,0.1);
-    margin: 15px 0;
+/* RIGHT SIDE */
+.right {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-    .card {
-        width: 95%;
-    }
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  background: #1e293b;
+  padding: 10px;
+  border-radius: 10px;
+}
 
-    .video-area {
-        flex-direction: column;
-    }
+.chat-input {
+  display: flex;
+}
 
-    .video-area > div {
-        width: 100%;
-    }
-
-    input {
-        width: 90%;
-    }
+.chat-input input {
+  flex: 1;
 }

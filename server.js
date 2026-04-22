@@ -6,56 +6,47 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  maxHttpBufferSize: 15 * 1024 * 1024
+  maxHttpBufferSize: 20 * 1024 * 1024
 });
 
 app.use(express.static('public'));
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
 
   socket.on("set-username", (name) => {
     socket.data.username = name;
   });
 
-  socket.on("join-room", (roomId) => {
-    socket.join(roomId);
+  socket.on("join-room", (room) => {
+    socket.join(room);
   });
 
   socket.on("chat-message", (data) => {
-    io.to(data.roomId).emit("chat-message", data);
+    io.to(data.room).emit("chat-message", data);
   });
 
-  socket.on("gesture", ({ roomId, gesture }) => {
-    io.to(roomId).emit("gesture", {
-      senderId: socket.id,
-      username: socket.data.username || "User",
-      gesture
+  socket.on("gesture", (data) => {
+    io.to(data.room).emit("gesture", {
+      sender: socket.data.username,
+      text: data.text
     });
   });
 
   socket.on("offer", (data) => {
-    socket.to(data.roomId).emit("offer", data.offer);
+    socket.to(data.room).emit("offer", data.offer);
   });
 
   socket.on("answer", (data) => {
-    socket.to(data.roomId).emit("answer", data.answer);
+    socket.to(data.room).emit("answer", data.answer);
   });
 
   socket.on("candidate", (data) => {
-    socket.to(data.roomId).emit("candidate", data.candidate);
+    socket.to(data.room).emit("candidate", data.candidate);
   });
 
   socket.on("file", (data) => {
-    io.to(data.roomId).emit("file", {
-      sender: socket.data.username || "User",
-      roomId: data.roomId,
-      fileName: data.fileName,
-      fileType: data.fileType,
-      fileData: data.fileData
-    });
+    io.to(data.room).emit("file", data);
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Server running"));
+server.listen(process.env.PORT || 3000);

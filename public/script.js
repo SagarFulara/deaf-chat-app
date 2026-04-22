@@ -7,7 +7,6 @@ let isGestureRunning = false;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
-
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -23,8 +22,9 @@ function join() {
   document.getElementById("main").style.display = "block";
 }
 
-// ================= VIDEO =================
+// ================= VIDEO CALL =================
 async function startCall() {
+
   pc = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   });
@@ -36,30 +36,106 @@ async function startCall() {
 
   localVideo.srcObject = localStream;
 
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  localStream.getTracks().forEach(track =>
+    pc.addTrack(track, localStream)
+  );
 
-  pc.ontrack = e => remoteVideo.srcObject = e.streams[0];
+  pc.ontrack = e => {
+    remoteVideo.srcObject = e.streams[0];
+  };
+
+  pc.onicecandidate = e => {
+    if (e.candidate) {
+      socket.emit("candidate", { room, candidate: e.candidate });
+    }
+  };
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  socket.emit("offer", { room, offer });
+}
+
+socket.on("offer", async (offer) => {
+
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+
+  localStream = await navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true
+  });
+
+  localVideo.srcObject = localStream;
+
+  localStream.getTracks().forEach(track =>
+    pc.addTrack(track, localStream)
+  );
+
+  pc.ontrack = e => {
+    remoteVideo.srcObject = e.streams[0];
+  };
+
+  pc.onicecandidate = e => {
+    if (e.candidate) {
+      socket.emit("candidate", { room, candidate: e.candidate });
+    }
+  };
+
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+
+  socket.emit("answer", { room, answer });
+});
+
+socket.on("answer", async (ans) => {
+  await pc.setRemoteDescription(new RTCSessionDescription(ans));
+});
+
+socket.on("candidate", async (c) => {
+  if (pc) {
+    await pc.addIceCandidate(new RTCIceCandidate(c));
+  }
+});
+
+// END CALL FIX
+function endCall() {
+
+  if (pc) {
+    pc.close();
+    pc = null;
+  }
+
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+  }
+
+  localVideo.srcObject = null;
+  remoteVideo.srcObject = null;
+
+  isGestureRunning = false;
 }
 
 // ================= GESTURE =================
 
-// SAFE CHECK
+// CHECK
 if (typeof Hands === "undefined") {
-  alert("MediaPipe not loaded ❌");
+  console.log("❌ MediaPipe not loaded");
 }
 
-// INIT
 const hands = new Hands({
   locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
 });
 
 hands.setOptions({
   maxNumHands: 1,
-  minDetectionConfidence: 0.7,
-  minTrackingConfidence: 0.7
+  minDetectionConfidence: 0.6,
+  minTrackingConfidence: 0.6
 });
 
-// RESULT
 hands.onResults((res) => {
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -74,10 +150,10 @@ hands.onResults((res) => {
   drawConnectors(ctx, l, HAND_CONNECTIONS);
   drawLandmarks(ctx, l);
 
-  document.getElementById("myGesture").innerText = "HAND DETECTED ✅";
+  document.getElementById("myGesture").innerText = "Hand Detected ✋";
 });
 
-// START
+// START GESTURE
 async function startGesture() {
 
   if (!localStream) {
@@ -87,38 +163,28 @@ async function startGesture() {
 
   await localVideo.play();
 
-  // 🔥 FORCE WAIT (CRITICAL)
-  await new Promise(r => setTimeout(r, 2000));
-
-  // 🔥 FIX CANVAS SIZE
-  canvas.width = localVideo.videoWidth;
-  canvas.height = localVideo.videoHeight;
+  // canvas fix
+  canvas.width = localVideo.videoWidth || 320;
+  canvas.height = localVideo.videoHeight || 240;
 
   isGestureRunning = true;
 
   runGesture();
 }
 
-// STOP
-function stopGesture() {
-  isGestureRunning = false;
-}
-
-// LOOP (ULTRA STABLE)
+// LOOP
 async function runGesture() {
 
   if (!isGestureRunning) return;
 
-  if (localVideo.readyState === 4) {
-    try {
-      await hands.send({
-        image: localVideo,
-        timestamp: Date.now()
-      });
-    } catch (e) {
-      console.log("Gesture error:", e);
-    }
+  if (localVideo.readyState >= 2) {
+    await hands.send({ image: localVideo });
   }
 
   requestAnimationFrame(runGesture);
+}
+
+// STOP
+function stopGesture() {
+  isGestureRunning = false;
 }

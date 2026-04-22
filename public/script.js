@@ -1,6 +1,10 @@
 const socket = io();
 
-let name, room, pc, camera;
+let name, room;
+let pc;
+let localStream;
+let camera;
+let isCallStarted = false;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
@@ -12,7 +16,7 @@ const ctx = canvas.getContext("2d");
 canvas.width = 300;
 canvas.height = 200;
 
-// JOIN
+// ================= LOGIN =================
 function join() {
   name = document.getElementById("name").value;
   room = document.getElementById("room").value;
@@ -24,7 +28,7 @@ function join() {
   document.getElementById("main").classList.remove("hidden");
 }
 
-// CHAT
+// ================= CHAT =================
 function sendMsg() {
   const msg = document.getElementById("msg").value;
 
@@ -41,21 +45,36 @@ function addMsg(m) {
   document.getElementById("messages").innerHTML += `<p>${m}</p>`;
 }
 
-// VIDEO
+// ================= VIDEO CALL =================
 async function startCall() {
+
+  if (isCallStarted) return;
+  isCallStarted = true;
+
   pc = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   });
 
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  localVideo.srcObject = stream;
+  localStream = await navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true
+  });
 
-  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+  localVideo.srcObject = localStream;
 
-  pc.ontrack = e => remoteVideo.srcObject = e.streams[0];
+  localStream.getTracks().forEach(track => {
+    pc.addTrack(track, localStream);
+  });
 
-  pc.onicecandidate = e => {
-    if (e.candidate) socket.emit("candidate", { room, candidate: e.candidate });
+  pc.ontrack = (event) => {
+    console.log("Remote stream received ✅");
+    remoteVideo.srcObject = event.streams[0];
+  };
+
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      socket.emit("candidate", { room, candidate: event.candidate });
+    }
   };
 
   const offer = await pc.createOffer();
@@ -65,35 +84,89 @@ async function startCall() {
 }
 
 socket.on("offer", async (offer) => {
-  await startCall();
-  await pc.setRemoteDescription(offer);
 
-  const ans = await pc.createAnswer();
-  await pc.setLocalDescription(ans);
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
 
-  socket.emit("answer", { room, answer: ans });
+  localStream = await navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true
+  });
+
+  localVideo.srcObject = localStream;
+
+  localStream.getTracks().forEach(track => {
+    pc.addTrack(track, localStream);
+  });
+
+  pc.ontrack = (event) => {
+    console.log("Remote stream received ✅");
+    remoteVideo.srcObject = event.streams[0];
+  };
+
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      socket.emit("candidate", { room, candidate: event.candidate });
+    }
+  };
+
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+
+  socket.emit("answer", { room, answer });
 });
 
-socket.on("answer", async (a) => {
-  await pc.setRemoteDescription(a);
+socket.on("answer", async (answer) => {
+  await pc.setRemoteDescription(new RTCSessionDescription(answer));
 });
 
 socket.on("candidate", async (c) => {
-  await pc.addIceCandidate(new RTCIceCandidate(c));
+  try {
+    await pc.addIceCandidate(new RTCIceCandidate(c));
+  } catch (e) {
+    console.error("ICE error", e);
+  }
 });
 
-// ===== GESTURE =====
+function endCall() {
+
+  if (pc) {
+    pc.close();
+    pc = null;
+  }
+
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+  }
+
+  localVideo.srcObject = null;
+  remoteVideo.srcObject = null;
+
+  isCallStarted = false;
+}
+
+// ================= GESTURE =================
 const hands = new Hands({
   locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
 });
 
-hands.setOptions({ maxNumHands:1 });
+hands.setOptions({
+  maxNumHands: 1,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
 
 hands.onResults((res) => {
 
-  ctx.clearRect(0,0,300,200);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  if (!res.multiHandLandmarks || res.multiHandLandmarks.length === 0) return;
+  if (!res.multiHandLandmarks || res.multiHandLandmarks.length === 0) {
+    document.getElementById("myGesture").innerText = "No Hand ❌";
+    return;
+  }
 
   const l = res.multiHandLandmarks[0];
 
@@ -134,26 +207,29 @@ async function startGesture() {
   camera.start();
 }
 
-// FILE
+// ================= FILE =================
 function sendFile() {
-  const f = document.getElementById("file").files[0];
-  const r = new FileReader();
 
-  r.onload = () => {
+  const f = document.getElementById("file").files[0];
+  const reader = new FileReader();
+
+  reader.onload = () => {
     socket.emit("file", {
       room,
       name: f.name,
-      data: r.result
+      data: reader.result
     });
   };
 
-  r.readAsDataURL(f);
+  reader.readAsDataURL(f);
 }
 
 socket.on("file", (d) => {
+
   const a = document.createElement("a");
   a.href = d.data;
   a.download = d.name;
   a.innerText = "Download " + d.name;
+
   document.getElementById("messages").appendChild(a);
 });

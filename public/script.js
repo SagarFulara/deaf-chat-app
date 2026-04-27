@@ -273,3 +273,28 @@ socket.on("file", (d) => {
   a.innerText = "📎 Download " + d.name;
   document.getElementById("messages").appendChild(a);
 });
+
+
+
+// ===== THEME TOGGLE =====
+const toggleBtn = document.getElementById("themeToggle");
+
+toggleBtn.onclick = () => {
+  document.body.classList.toggle("light");
+
+  if (document.body.classList.contains("light")) {
+    toggleBtn.innerText = "☀️";
+    localStorage.setItem("theme", "light");
+  } else {
+    toggleBtn.innerText = "🌙";
+    localStorage.setItem("theme", "dark");
+  }
+};
+
+// Load saved theme
+window.addEventListener("DOMContentLoaded", () => {
+  if (localStorage.getItem("theme") === "light") {
+    document.body.classList.add("light");
+    toggleBtn.innerText = "☀️";
+  }
+});

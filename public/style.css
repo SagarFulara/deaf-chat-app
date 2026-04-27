@@ -574,3 +574,75 @@ button {
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+
+
+
+
+/* ===== LIGHT MODE ===== */
+body.light {
+  --bg-deep: #f5f9ff;
+  --bg-panel: rgba(255, 255, 255, 0.9);
+  --bg-input: #ffffff;
+  --text: #0b1a2b;
+  --text-muted: rgba(0, 0, 0, 0.5);
+  --border: rgba(0, 0, 0, 0.1);
+  --cyan: #0077ff;
+  --cyan-dim: rgba(0, 119, 255, 0.1);
+}
+
+/* Smooth transitions */
+* {
+  transition: background 0.3s, color 0.3s, border 0.3s;
+}
+
+/* Better glass effect */
+.login-card,
+.app-header,
+#messages,
+.video-box {
+  backdrop-filter: blur(25px) saturate(160%);
+}
+
+/* Button hover shine */
+button {
+  position: relative;
+  overflow: hidden;
+}
+
+button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.2), transparent);
+  opacity: 0;
+  transition: 0.4s;
+}
+
+button:hover::after {
+  opacity: 1;
+}
+
+/* Video hover effect */
+.video-box:hover {
+  transform: scale(1.01);
+}
+
+/* Chat bubbles */
+#messages p {
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(0,229,255,0.08), rgba(0,180,216,0.05));
+  border-radius: 12px;
+}
+
+/* Input focus glow */
+.chat-input input:focus {
+  box-shadow: 0 0 10px rgba(0,229,255,0.4);
+}
+
+/* Sticky header */
+.app-header {
+  position: sticky;
+  top: 10px;
+  z-index: 10;
+}

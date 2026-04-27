@@ -4,7 +4,9 @@
   <title>Deaf Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
+
   <script src="/socket.io/socket.io.js"></script>
+
   <!-- MediaPipe -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
@@ -13,33 +15,35 @@
 
 <body>
 
-<!-- ===== LOGIN ===== -->
+<!-- LOGIN -->
 <div id="login">
   <div class="login-card">
     <div class="login-logo">🤟</div>
     <h2>Deaf Chat</h2>
     <p class="subtitle">Real-time gesture & video communication</p>
-    <input id="name" placeholder="Your name" autocomplete="off">
-    <input id="room" placeholder="Room code" autocomplete="off">
+    <input id="name" placeholder="Your name">
+    <input id="room" placeholder="Room code">
     <button onclick="join()">Enter Room →</button>
   </div>
 </div>
 
-<!-- ===== MAIN APP ===== -->
+<!-- MAIN -->
 <div id="main" style="display:none;">
 
-  <!-- Header -->
   <div class="app-header">
-    <div class="brand"><span>🤟</span> Deaf Chat</div>
+    <div class="brand">🤟 Deaf Chat</div>
+
+    <!-- 🌗 THEME BUTTON -->
+    <button id="themeToggle">🌙</button>
+
     <div class="status-dot">
       <div class="dot"></div>
       <span id="roomLabel">Connected</span>
     </div>
   </div>
 
-  <!-- Video feeds -->
+  <!-- VIDEOS -->
   <div class="videos">
-
     <div class="video-box">
       <span class="video-label">You</span>
       <video id="localVideo" autoplay muted playsinline></video>
@@ -52,25 +56,24 @@
       <video id="remoteVideo" autoplay playsinline></video>
       <p id="remoteGesture">Remote: —</p>
     </div>
-
   </div>
 
-  <!-- Controls -->
+  <!-- CONTROLS -->
   <div class="controls">
-    <button class="btn-start" onclick="startCall()">📹 Start Call</button>
-    <button class="btn-end"   onclick="endCall()">📵 End Call</button>
-    <button class="btn-start" onclick="startGesture()">🖐 Start Gesture</button>
-    <button class="btn-end"   onclick="stopGesture()">✋ Stop Gesture</button>
+    <button class="btn-start" onclick="startCall()">🎥 Start Call</button>
+    <button class="btn-end" onclick="endCall()">❌ End Call</button>
+    <button class="btn-start" onclick="startGesture()">🤟 Start Gesture</button>
+    <button class="btn-end" onclick="stopGesture()">🛑 Stop Gesture</button>
   </div>
 
-  <!-- Chat -->
+  <!-- CHAT -->
   <div id="chat">
-    <div class="chat-header">💬 &nbsp;Messages</div>
+    <div class="chat-header">💬 Messages</div>
     <div id="messages"></div>
 
     <div class="chat-input">
-      <input id="msg" placeholder="Type a message…" autocomplete="off"
-             onkeydown="if(event.key==='Enter') sendMsg()">
+      <input id="msg" placeholder="Type a message…"
+        onkeydown="if(event.key==='Enter') sendMsg()">
       <button onclick="sendMsg()">Send</button>
     </div>
 
@@ -83,18 +86,6 @@
 </div>
 
 <script src="script.js"></script>
-
-<!-- Patch: show room name in header -->
-<script>
-  const _origJoin = join;
-  // Extend join to update the room label
-  window.join = function() {
-    _origJoin();
-    const r = document.getElementById("room") || { value: "" };
-    document.getElementById("roomLabel").textContent =
-      "Room: " + (r.value || document.getElementById("roomLabel").textContent);
-  };
-</script>
 
 </body>
 </html>

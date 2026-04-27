@@ -10,7 +10,6 @@
   <!-- MediaPipe -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
 
 <body>
@@ -18,11 +17,21 @@
 <!-- LOGIN -->
 <div id="login">
   <div class="login-card">
+
+    <!-- THEME TOGGLE (LOGIN TOP RIGHT) -->
+    <div class="login-top">
+      <button id="themeToggleLogin" class="theme-pill small">
+        🌙 <span>Dark</span>
+      </button>
+    </div>
+
     <div class="login-logo">🤟</div>
     <h2>Deaf Chat</h2>
     <p class="subtitle">Real-time gesture & video communication</p>
+
     <input id="name" placeholder="Your name">
     <input id="room" placeholder="Room code">
+
     <button onclick="join()">Enter Room →</button>
   </div>
 </div>
@@ -30,29 +39,36 @@
 <!-- MAIN -->
 <div id="main" style="display:none;">
 
+  <!-- HEADER -->
   <div class="app-header">
+
     <div class="brand">🤟 Deaf Chat</div>
 
-    <!-- 🌗 THEME BUTTON -->
-    <button id="themeToggle">🌙</button>
+    <div class="header-right">
+      <div class="status-dot">
+        <div class="dot"></div>
+        <span id="roomLabel">Connected</span>
+      </div>
 
-    <div class="status-dot">
-      <div class="dot"></div>
-      <span id="roomLabel">Connected</span>
+      <!-- THEME TOGGLE -->
+      <button id="themeToggle" class="theme-pill">
+        🌙 <span>Dark</span>
+      </button>
     </div>
+
   </div>
 
   <!-- VIDEOS -->
   <div class="videos">
     <div class="video-box">
-      <span class="video-label">You</span>
+      <span class="video-label">YOU</span>
       <video id="localVideo" autoplay muted playsinline></video>
       <canvas id="canvas"></canvas>
       <p id="myGesture">Your Gesture: —</p>
     </div>
 
     <div class="video-box">
-      <span class="video-label">Remote</span>
+      <span class="video-label">REMOTE</span>
       <video id="remoteVideo" autoplay playsinline></video>
       <p id="remoteGesture">Remote: —</p>
     </div>
@@ -72,8 +88,8 @@
     <div id="messages"></div>
 
     <div class="chat-input">
-      <input id="msg" placeholder="Type a message…"
-        onkeydown="if(event.key==='Enter') sendMsg()">
+      <input id="msg" placeholder="Type a message..."
+             onkeydown="if(event.key==='Enter') sendMsg()">
       <button onclick="sendMsg()">Send</button>
     </div>
 

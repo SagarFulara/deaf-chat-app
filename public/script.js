@@ -277,24 +277,37 @@ socket.on("file", (d) => {
 
 
 // ===== THEME TOGGLE =====
-const toggleBtn = document.getElementById("themeToggle");
+const toggleMain = document.getElementById("themeToggle");
+const toggleLogin = document.getElementById("themeToggleLogin");
 
-toggleBtn.onclick = () => {
-  document.body.classList.toggle("light");
+function updateUI(isLight) {
+  const text = isLight ? "Light" : "Dark";
+  const icon = isLight ? "☀️" : "🌙";
 
-  if (document.body.classList.contains("light")) {
-    toggleBtn.innerText = "☀️";
-    localStorage.setItem("theme", "light");
-  } else {
-    toggleBtn.innerText = "🌙";
-    localStorage.setItem("theme", "dark");
-  }
-};
+  if (toggleMain) toggleMain.innerHTML = `${icon} <span>${text}</span>`;
+  if (toggleLogin) toggleLogin.innerHTML = `${icon} <span>${text}</span>`;
+}
 
-// Load saved theme
-window.addEventListener("DOMContentLoaded", () => {
-  if (localStorage.getItem("theme") === "light") {
+function setTheme(mode) {
+  if (mode === "light") {
     document.body.classList.add("light");
-    toggleBtn.innerText = "☀️";
+    localStorage.setItem("theme", "light");
+    updateUI(true);
+  } else {
+    document.body.classList.remove("light");
+    localStorage.setItem("theme", "dark");
+    updateUI(false);
   }
+}
+
+function toggleTheme() {
+  const isLight = document.body.classList.contains("light");
+  setTheme(isLight ? "dark" : "light");
+}
+
+if (toggleMain) toggleMain.onclick = toggleTheme;
+if (toggleLogin) toggleLogin.onclick = toggleTheme;
+
+window.addEventListener("DOMContentLoaded", () => {
+  setTheme(localStorage.getItem("theme") || "dark");
 });

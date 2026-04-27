@@ -646,3 +646,36 @@ button:hover::after {
   top: 10px;
   z-index: 10;
 }
+/* ===== FIX THEME TOGGLE POSITION ===== */
+
+/* Login page toggle */
+#themeToggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 38px;
+  border-radius: 20px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+/* Header toggle override */
+.app-header #themeToggle {
+  position: static;
+  width: 36px;
+  height: 32px;
+  border-radius: 14px;
+  padding: 0;
+}
+
+/* Icon */
+#themeToggle .t-icon {
+  font-size: 16px;
+}

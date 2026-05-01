@@ -1,3 +1,18 @@
+// ===== ENCRYPTION =====
+const SECRET_KEY = "deafchat-secret-123";
+
+function encrypt(msg) {
+  return CryptoJS.AES.encrypt(msg, SECRET_KEY).toString();
+}
+
+function decrypt(cipher) {
+  try {
+    const bytes = CryptoJS.AES.decrypt(cipher, SECRET_KEY);
+    return bytes.toString(CryptoJS.enc.Utf8);
+  } catch {
+    return "Error";
+  }
+}
 // SOCKET
 const socket = io({
   transports: ["websocket"],
@@ -35,13 +50,16 @@ function sendMsg() {
   const msg = document.getElementById("msg").value;
   if (!msg) return;
 
-  socket.emit("chat-message", { user: name, room, msg });
+  socket.emit("chat-message", {
+  user: name,
+  room,
+  msg: encrypt(msg)});
   addMsg("You: " + msg);
   document.getElementById("msg").value = "";
 }
 
 socket.on("chat-message", (d) => {
-  addMsg(d.user + ": " + d.msg);
+  addMsg(d.user + ": " + decrypt(d.msg));
 });
 
 function addMsg(m) {
@@ -386,16 +404,24 @@ function sendFile() {
 
   const reader = new FileReader();
   reader.onload = () => {
-    socket.emit("file", { room, name: f.name, data: reader.result });
+    const encryptedData = encrypt(reader.result); // 🔐 ENCRYPT
+
+    socket.emit("file", {
+      room,
+      name: f.name,
+      data: encryptedData
+    });
   };
   reader.readAsDataURL(f);
 }
-
 socket.on("file", (d) => {
+  const decryptedData = decrypt(d.data); // 🔐 DECRYPT
+
   const a = document.createElement("a");
-  a.href = d.data;
+  a.href = decryptedData;
   a.download = d.name;
   a.innerText = "📎 Download " + d.name;
+
   document.getElementById("messages").appendChild(a);
 });
 

@@ -1,133 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Deaf Chat</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Real-time chat, video calling, file sharing, and gesture communication for Deaf Chat.">
+  <title>Deaf Chat</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="style.css">
 
-  <script src="/socket.io/socket.io.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-
-  <!-- MediaPipe -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script defer src="/socket.io/socket.io.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script defer src="script.js"></script>
 </head>
 
 <body>
-
-<!-- LOGIN -->
-<div id="login">
-  <div class="login-card">
-    <div class="login-top">
-      <button id="themeToggleLogin" class="theme-pill small">🌙</button>
-    </div>
-
-    <div class="login-logo">🤟</div>
-    <h2>Deaf Chat</h2>
-    <p class="subtitle">Real-time gesture & video communication</p>
-
-    <input id="name" placeholder="Your name">
-    <input id="room" placeholder="Room code">
-    <button onclick="join()">Enter Room →</button>
-  </div>
-</div>
-
-<!-- MAIN -->
-<div id="main" style="display:none;">
-
-  <!-- HEADER -->
-  <div class="app-header">
-    <div class="brand">🤟 Deaf Chat</div>
-    <button id="themeToggle">🌙</button>
-  </div>
-
-  <!-- MAIN LAYOUT -->
-  <div class="main-layout">
-
-    <!-- LEFT PANEL -->
-    <div class="left-panel">
-
-      <!-- VIDEOS -->
-      <div class="videos">
-        <div class="video-box">
-          <span class="video-label">YOU</span>
-          <video id="localVideo" autoplay muted playsinline></video>
-          <canvas id="canvas"></canvas>
-          <p id="myGesture">Your Gesture: —</p>
+  <main>
+    <section id="login" aria-labelledby="appTitle">
+      <div class="login-card">
+        <div class="login-top">
+          <button id="themeToggleLogin" class="theme-pill small" type="button" aria-label="Toggle theme">
+            🌙
+          </button>
         </div>
 
-        <div class="video-box">
-          <span class="video-label">REMOTE</span>
-          <video id="remoteVideo" autoplay playsinline></video>
-          <p id="remoteGesture">Remote: —</p>
-        </div>
+        <div class="login-logo" aria-hidden="true">🤟</div>
+        <h1 id="appTitle">Deaf Chat</h1>
+        <p class="subtitle">Real-time gesture & video communication</p>
+
+        <label class="sr-only" for="name">Your name</label>
+        <input id="name" name="name" type="text" placeholder="Your name" autocomplete="name" required>
+
+        <label class="sr-only" for="room">Room code</label>
+        <input id="room" name="room" type="text" placeholder="Room code" autocomplete="off" required>
+
+        <button id="joinBtn" class="join-btn" type="button">Enter Room →</button>
       </div>
+    </section>
 
-      <!-- CONTROLS -->
-      <div class="controls">
-        <button class="btn-start" onclick="startCall()">🎥 Start</button>
-        <button class="btn-end" onclick="endCall()">❌ End</button>
-        <button class="btn-start" onclick="startGesture()">🤟 Gesture</button>
-        <button class="btn-end" onclick="stopGesture()">🛑 Stop</button>
-      </div>
+    <section id="main" aria-label="Deaf Chat room" hidden>
+      <header class="app-header">
+        <div class="brand" aria-label="Deaf Chat">🤟 Deaf Chat</div>
+        <button id="themeToggle" type="button" aria-label="Toggle theme">🌙</button>
+      </header>
 
-      <!-- ✅ CHAT (FIXED POSITION) -->
-      <div id="chat">
-        <div class="chat-header">💬 Messages</div>
+      <div class="main-layout">
+        <div class="left-panel">
+          <section class="videos" aria-label="Video call">
+            <div class="video-box">
+              <span class="video-label">YOU</span>
+              <video id="localVideo" autoplay muted playsinline></video>
+              <canvas id="canvas" aria-hidden="true"></canvas>
+              <p id="myGesture" aria-live="polite">Your Gesture: —</p>
+            </div>
 
-        <div id="messages"></div>
+            <div class="video-box">
+              <span class="video-label">REMOTE</span>
+              <video id="remoteVideo" autoplay playsinline></video>
+              <p id="remoteGesture" aria-live="polite">Remote: —</p>
+            </div>
+          </section>
 
-        <div class="chat-input">
-          <input id="msg" placeholder="Type a message..."
-            onkeydown="if(event.key==='Enter') sendMsg()">
-          <button onclick="sendMsg()">Send</button>
+          <section class="controls" aria-label="Call and gesture controls">
+            <button id="startCallBtn" class="btn-start" type="button">🎥 Start</button>
+            <button id="endCallBtn" class="btn-end" type="button">❌ End</button>
+            <button id="startGestureBtn" class="btn-start" type="button">🤟 Gesture</button>
+            <button id="stopGestureBtn" class="btn-end" type="button">🛑 Stop</button>
+          </section>
+
+          <section id="chat" aria-labelledby="chatTitle">
+            <h2 id="chatTitle" class="chat-header">💬 Messages</h2>
+
+            <div id="messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+            <div class="chat-input">
+              <label class="sr-only" for="msg">Type a message</label>
+              <input id="msg" name="msg" type="text" placeholder="Type a message..." autocomplete="off">
+              <button id="sendMsgBtn" type="button">Send</button>
+            </div>
+
+            <div class="file-input">
+              <label class="sr-only" for="file">Choose a file</label>
+              <input id="file" name="file" type="file">
+              <button id="sendFileBtn" type="button">📎 Send</button>
+            </div>
+          </section>
         </div>
 
-        <div class="file-input">
-          <input type="file" id="file">
-          <button onclick="sendFile()">📎 Send</button>
-        </div>
+        <aside id="instructionBox" aria-labelledby="gesturesTitle">
+          <h2 id="gesturesTitle">🖐️ All Gestures</h2>
+          <ul>
+            <li id="g-hello">✋ Hello</li>
+            <li id="g-yes">👍 Yes</li>
+            <li id="g-no">👎 No</li>
+            <li id="g-peace">✌️ Peace</li>
+            <li id="g-point">☝️ Point</li>
+            <li id="g-fist">✊ Fist</li>
+            <li id="g-four">🖐️ Four</li>
+            <li id="g-three">3️⃣ Three</li>
+            <li id="g-two">✌️ Two</li>
+            <li id="g-one">☝️ One</li>
+            <li id="g-rock">🤘 Rock</li>
+            <li id="g-ily">🤟 ILY</li>
+            <li id="g-call">🤙 Call</li>
+            <li id="g-gun">🔫 Gun</li>
+            <li id="g-ok">👌 OK</li>
+            <li id="g-pinchM">🤏 Pinch M</li>
+            <li id="g-pinchR">🤏 Pinch R</li>
+            <li id="g-pinchP">🤏 Pinch P</li>
+            <li id="g-disagree">❌ Disagree</li>
+            <li id="g-cool">😎 Cool</li>
+            <li id="g-partial">✋ Partial</li>
+          </ul>
+        </aside>
       </div>
-
-    </div>
-
-    <!-- RIGHT PANEL -->
-    <div id="instructionBox">
-      <h3>🖐️ All Gestures</h3>
-      <ul>
-        <li id="g-hello">✋ Hello</li>
-        <li id="g-yes">👍 Yes</li>
-        <li id="g-no">👎 No</li>
-        <li id="g-peace">✌️ Peace</li>
-        <li id="g-point">☝️ Point</li>
-        <li id="g-fist">✊ Fist</li>
-
-        <li id="g-four">🖐️ Four</li>
-        <li id="g-three">3️⃣ Three</li>
-        <li id="g-two">✌️ Two</li>
-        <li id="g-one">☝️ One</li>
-
-        <li id="g-rock">🤘 Rock</li>
-        <li id="g-ily">🤟 ILY</li>
-        <li id="g-call">🤙 Call</li>
-        <li id="g-gun">🔫 Gun</li>
-
-        <li id="g-ok">👌 OK</li>
-        <li id="g-pinchM">🤏 Pinch M</li>
-        <li id="g-pinchR">🤏 Pinch R</li>
-        <li id="g-pinchP">🤏 Pinch P</li>
-
-        <li id="g-disagree">❌ Disagree</li>
-        <li id="g-cool">😎 Cool</li>
-        <li id="g-partial">✋ Partial</li>
-      </ul>
-    </div>
-
-  </div>
-
-</div>
-
-<script src="script.js"></script>
-
+    </section>
+  </main>
 </body>
 </html>

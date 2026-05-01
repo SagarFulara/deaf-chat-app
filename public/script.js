@@ -53,7 +53,14 @@ const els = {
   myGesture: $("myGesture"),
   remoteGesture: $("remoteGesture"),
   themeToggle: $("themeToggle"),
-  themeToggleLogin: $("themeToggleLogin")
+  themeToggleLogin: $("themeToggleLogin"),
+  joinBtn: $("joinBtn"),
+  startCallBtn: $("startCallBtn"),
+  endCallBtn: $("endCallBtn"),
+  startGestureBtn: $("startGestureBtn"),
+  stopGestureBtn: $("stopGestureBtn"),
+  sendMsgBtn: $("sendMsgBtn"),
+  sendFileBtn: $("sendFileBtn")
 };
 
 const ctx = els.canvas.getContext("2d");
@@ -92,7 +99,10 @@ function setText(el, text) {
 }
 
 function setDisplay(el, value) {
-  if (el) el.style.display = value;
+  if (!el) return;
+
+  el.hidden = value === "none";
+  el.style.display = value;
 }
 
 function addMsg(m) {
@@ -580,4 +590,15 @@ if (els.themeToggleLogin) els.themeToggleLogin.onclick = toggleTheme;
 window.addEventListener("DOMContentLoaded", () => {
   cacheGestureHighlightElements();
   setTheme(localStorage.getItem("theme") || "dark");
+
+  els.joinBtn?.addEventListener("click", join);
+  els.startCallBtn?.addEventListener("click", startCall);
+  els.endCallBtn?.addEventListener("click", endCall);
+  els.startGestureBtn?.addEventListener("click", startGesture);
+  els.stopGestureBtn?.addEventListener("click", stopGesture);
+  els.sendMsgBtn?.addEventListener("click", sendMsg);
+  els.sendFileBtn?.addEventListener("click", sendFile);
+  els.msg?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") sendMsg();
+  });
 });

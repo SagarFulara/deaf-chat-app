@@ -62,6 +62,25 @@ function emitToRoom(socket, event, data, payload) {
   return true;
 }
 
+function emitToPeer(socket, event, data, payload) {
+  if (!isObject(data)) return false;
+
+  const targetId = cleanText(data.to, 80);
+
+  if (!targetId) {
+    socket.emit("error-message", "No peer selected for the video call.");
+    return false;
+  }
+
+  io.to(targetId).emit(event, {
+    from: socket.id,
+    sender: socket.data.username,
+    ...payload
+  });
+
+  return true;
+}
+
 function ack(ackFn, payload) {
   if (typeof ackFn === "function") ackFn(payload);
 }
@@ -70,6 +89,7 @@ io.on("connection", (socket) => {
   socket.data.username = "User";
 
   console.log("User connected:", socket.id);
+  socket.emit("socket-id", socket.id);
 
   socket.on("set-username", (rawName) => {
     const username = cleanText(rawName, MAX_NAME_LENGTH);
@@ -77,7 +97,7 @@ io.on("connection", (socket) => {
     console.log("Username set:", socket.id, socket.data.username);
   });
 
-  socket.on("join-room", (rawRoom) => {
+  socket.on("join-room", async (rawRoom) => {
     const room = cleanText(rawRoom, MAX_ROOM_LENGTH);
 
     if (!room) {
@@ -85,7 +105,24 @@ io.on("connection", (socket) => {
       return;
     }
 
+    const existingPeers = await io.in(room).fetchSockets();
     socket.join(room);
+    socket.data.room = room;
+
+    socket.emit("room-peers", {
+      peers: existingPeers
+        .filter((peer) => peer.id !== socket.id)
+        .map((peer) => ({
+          id: peer.id,
+          username: peer.data.username || "User"
+        }))
+    });
+
+    socket.to(room).emit("peer-joined", {
+      id: socket.id,
+      username: socket.data.username || "User"
+    });
+
     console.log(`${socket.data.username} joined room:`, room);
   });
 
@@ -106,17 +143,59 @@ io.on("connection", (socket) => {
 
   socket.on("offer", (data) => {
     if (!isObject(data) || !data.offer) return;
-    emitToRoom(socket, "offer", data, data.offer);
+    if (data.to) {
+      emitToPeer(socket, "offer", data, { offer: data.offer });
+      return;
+    }
+
+    emitToRoom(socket, "offer", data, {
+      from: socket.id,
+      sender: socket.data.username,
+      offer: data.offer
+    });
   });
 
   socket.on("answer", (data) => {
     if (!isObject(data) || !data.answer) return;
-    emitToRoom(socket, "answer", data, data.answer);
+    if (data.to) {
+      emitToPeer(socket, "answer", data, { answer: data.answer });
+      return;
+    }
+
+    emitToRoom(socket, "answer", data, {
+      from: socket.id,
+      sender: socket.data.username,
+      answer: data.answer
+    });
   });
 
   socket.on("candidate", (data) => {
     if (!isObject(data) || !data.candidate) return;
-    emitToRoom(socket, "candidate", data, data.candidate);
+    if (data.to) {
+      emitToPeer(socket, "candidate", data, { candidate: data.candidate });
+      return;
+    }
+
+    emitToRoom(socket, "candidate", data, {
+      from: socket.id,
+      sender: socket.data.username,
+      candidate: data.candidate
+    });
+  });
+
+  socket.on("call-ready", (data) => {
+    if (!isObject(data)) return;
+
+    const room = getRoom(data);
+    if (!isInRoom(socket, room)) {
+      socket.emit("error-message", "Join the room before starting a call.");
+      return;
+    }
+
+    socket.to(room).emit("call-ready", {
+      from: socket.id,
+      sender: socket.data.username
+    });
   });
 
   socket.on("gesture", (data) => {

@@ -43,6 +43,10 @@ let room = "";
 let pc = null;
 let localStream = null;
 let remoteStream = null;
+let peerId = null;
+let isCallStarted = false;
+let peerReadyForCall = false;
+let ownSocketId = "";
 let isGestureRunning = false;
 let hands = null;
 let animFrameId = null;
@@ -168,6 +172,9 @@ function setFileButtonBusy(isBusy) {
 function join() {
   name = els.name.value.trim();
   room = els.room.value.trim();
+  peerId = null;
+  isCallStarted = false;
+  peerReadyForCall = false;
 
   if (!name || !room) {
     alert("Enter name and room!");
@@ -202,6 +209,49 @@ socket.on("chat-message", (d) => {
 
 socket.on("error-message", (message) => {
   addMsg("Server: " + message);
+});
+
+socket.on("socket-id", (id) => {
+  ownSocketId = id || "";
+});
+
+socket.on("room-peers", (data) => {
+  const peers = Array.isArray(data?.peers) ? data.peers : [];
+
+  if (peers.length > 0) {
+    peerId = peers[0].id;
+    addMsg(`${peers[0].username || "User"} is already in this room. Press Start to call.`);
+  } else {
+    addMsg("Room joined. Waiting for another user...");
+  }
+});
+
+socket.on("peer-joined", (peer) => {
+  if (!peer?.id) return;
+
+  peerId = peer.id;
+  addMsg(`${peer.username || "User"} joined the room.`);
+
+  if (isCallStarted && !pc) {
+    setRemoteStatus("Peer joined. Ask them to press Start too.");
+    socket.emit("call-ready", { room });
+  }
+});
+
+socket.on("call-ready", (data) => {
+  if (!data?.from) return;
+
+  peerId = data.from;
+  peerReadyForCall = true;
+  addMsg(`${data.sender || "User"} is ready for video call.`);
+
+  if (isCallStarted && !pc && shouldCreateOffer(peerId)) {
+    callPeer(peerId);
+  } else if (!isCallStarted) {
+    setRemoteStatus("Peer ready. Press Start to connect.");
+  } else {
+    setRemoteStatus("Both ready. Waiting for peer offer...");
+  }
 });
 
 // ================= VIDEO HELPERS =================
@@ -250,8 +300,9 @@ async function playRemoteVideo() {
   }
 }
 
-function createPeerConnection() {
+function createPeerConnection(targetPeerId = peerId) {
   closePeerConnection();
+  peerId = targetPeerId || peerId;
 
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   remoteStream = new MediaStream();
@@ -273,8 +324,8 @@ function createPeerConnection() {
   };
 
   pc.onicecandidate = (e) => {
-    if (e.candidate) {
-      socket.emit("candidate", { room, candidate: e.candidate });
+    if (e.candidate && peerId) {
+      socket.emit("candidate", { room, to: peerId, candidate: e.candidate });
     }
   };
 
@@ -327,6 +378,30 @@ function unwrapSignal(payload, key) {
 }
 
 // ================= VIDEO CALL =================
+function shouldCreateOffer(targetPeerId) {
+  if (!ownSocketId || !targetPeerId) return true;
+  return ownSocketId > targetPeerId;
+}
+
+async function callPeer(targetPeerId) {
+  if (!targetPeerId) {
+    socket.emit("call-ready", { room });
+    setRemoteStatus("Waiting for another user...");
+    return;
+  }
+
+  setRemoteStatus("Calling...");
+
+  const peer = createPeerConnection(targetPeerId);
+  const stream = await ensureLocalStream({ audio: true });
+
+  addLocalTracks(peer, stream);
+
+  const offer = await peer.createOffer();
+  await peer.setLocalDescription(offer);
+  socket.emit("offer", { room, to: targetPeerId, offer });
+}
+
 async function startCall() {
   if (!room) {
     addMsg("Join a room before starting a call.");
@@ -339,18 +414,32 @@ async function startCall() {
   }
 
   try {
-    setRemoteStatus("Calling...");
-    const peer = createPeerConnection();
-    const stream = await ensureLocalStream({ audio: true });
+    isCallStarted = true;
+    await ensureLocalStream({ audio: true });
 
-    addLocalTracks(peer, stream);
+    socket.emit("call-ready", { room });
 
-    const offer = await peer.createOffer();
-    await peer.setLocalDescription(offer);
-    socket.emit("offer", { room, offer });
+    if (!peerId) {
+      setRemoteStatus("Waiting for another user...");
+      addMsg("Call ready. Ask the other user to join and press Start.");
+      return;
+    }
+
+    if (!peerReadyForCall) {
+      setRemoteStatus("Waiting for peer to press Start...");
+      addMsg("Ask the other user to press Start too.");
+      return;
+    }
+
+    if (shouldCreateOffer(peerId)) {
+      await callPeer(peerId);
+    } else {
+      setRemoteStatus("Both ready. Waiting for peer offer...");
+    }
   } catch (err) {
     console.error("Call start failed:", err);
     alert("Could not start the call. Please allow camera and microphone access.");
+    isCallStarted = false;
     closePeerConnection();
   }
 }
@@ -358,10 +447,13 @@ async function startCall() {
 socket.on("offer", async (payload) => {
   const offer = unwrapSignal(payload, "offer");
   if (!offer) return;
+  peerId = payload?.from || peerId;
+  peerReadyForCall = true;
 
   try {
+    isCallStarted = true;
     setRemoteStatus("Incoming call...");
-    const peer = createPeerConnection();
+    const peer = createPeerConnection(peerId);
     const stream = await ensureLocalStream({ audio: true });
 
     addLocalTracks(peer, stream);
@@ -371,10 +463,11 @@ socket.on("offer", async (payload) => {
 
     const answer = await peer.createAnswer();
     await peer.setLocalDescription(answer);
-    socket.emit("answer", { room, answer });
+    socket.emit("answer", { room, to: peerId, answer });
   } catch (err) {
     console.error("Offer handling failed:", err);
     alert("Could not answer the call.");
+    isCallStarted = false;
     closePeerConnection();
   }
 });
@@ -382,6 +475,7 @@ socket.on("offer", async (payload) => {
 socket.on("answer", async (payload) => {
   const answer = unwrapSignal(payload, "answer");
   if (!pc || !answer) return;
+  peerId = payload?.from || peerId;
 
   try {
     await pc.setRemoteDescription(new RTCSessionDescription(answer));
@@ -393,9 +487,10 @@ socket.on("answer", async (payload) => {
 
 socket.on("candidate", async (payload) => {
   const candidate = unwrapSignal(payload, "candidate");
-  if (!pc || !candidate) return;
+  if (!candidate) return;
+  peerId = payload?.from || peerId;
 
-  if (!pc.remoteDescription) {
+  if (!pc || !pc.remoteDescription) {
     pendingCandidates.push(candidate);
     return;
   }
@@ -411,6 +506,8 @@ function endCall() {
   closePeerConnection();
   els.remoteVideo.srcObject = null;
   remoteStream = null;
+  isCallStarted = false;
+  peerReadyForCall = false;
   setRemoteStatus("Remote: —");
 
   if (!localStream) return;

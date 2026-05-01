@@ -42,6 +42,7 @@ let name = "";
 let room = "";
 let pc = null;
 let localStream = null;
+let remoteStream = null;
 let isGestureRunning = false;
 let hands = null;
 let animFrameId = null;
@@ -80,7 +81,10 @@ const els = {
 };
 
 const ctx = els.canvas.getContext("2d");
-const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
+const ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" }
+];
 const ACTIVE_GESTURE_CLASS = "active-gesture";
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
@@ -222,23 +226,77 @@ function closePeerConnection() {
 
   pc.ontrack = null;
   pc.onicecandidate = null;
+  pc.onconnectionstatechange = null;
+  pc.oniceconnectionstatechange = null;
   pc.close();
   pc = null;
   pendingCandidates = [];
+}
+
+function setRemoteStatus(text) {
+  setText(els.remoteGesture, text);
+}
+
+async function playRemoteVideo() {
+  if (!els.remoteVideo.srcObject) return;
+
+  try {
+    els.remoteVideo.autoplay = true;
+    els.remoteVideo.playsInline = true;
+    await els.remoteVideo.play();
+  } catch (err) {
+    console.warn("Remote video autoplay blocked:", err);
+    setRemoteStatus("Remote video ready. Click/tap page if it does not play.");
+  }
 }
 
 function createPeerConnection() {
   closePeerConnection();
 
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  remoteStream = new MediaStream();
+  els.remoteVideo.srcObject = remoteStream;
 
   pc.ontrack = (e) => {
-    if (e.streams[0]) els.remoteVideo.srcObject = e.streams[0];
+    e.streams[0]?.getTracks().forEach((track) => {
+      if (!remoteStream.getTracks().some((existingTrack) => existingTrack.id === track.id)) {
+        remoteStream.addTrack(track);
+      }
+    });
+
+    if (!remoteStream.getTracks().some((track) => track.id === e.track.id)) {
+      remoteStream.addTrack(e.track);
+    }
+
+    setRemoteStatus("Remote connected");
+    playRemoteVideo();
   };
 
   pc.onicecandidate = (e) => {
     if (e.candidate) {
       socket.emit("candidate", { room, candidate: e.candidate });
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (!pc) return;
+
+    if (pc.connectionState === "connected") {
+      setRemoteStatus("Remote connected");
+      playRemoteVideo();
+    }
+
+    if (["failed", "disconnected"].includes(pc.connectionState)) {
+      setRemoteStatus("Remote connection issue. Try End, then Start again.");
+    }
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    if (!pc) return;
+
+    if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+      setRemoteStatus("Remote connected");
+      playRemoteVideo();
     }
   };
 
@@ -270,7 +328,18 @@ function unwrapSignal(payload, key) {
 
 // ================= VIDEO CALL =================
 async function startCall() {
+  if (!room) {
+    addMsg("Join a room before starting a call.");
+    return;
+  }
+
+  if (!socket.connected) {
+    addMsg("Call not started: server is not connected. Open http://localhost:3000.");
+    return;
+  }
+
   try {
+    setRemoteStatus("Calling...");
     const peer = createPeerConnection();
     const stream = await ensureLocalStream({ audio: true });
 
@@ -288,8 +357,10 @@ async function startCall() {
 
 socket.on("offer", async (payload) => {
   const offer = unwrapSignal(payload, "offer");
+  if (!offer) return;
 
   try {
+    setRemoteStatus("Incoming call...");
     const peer = createPeerConnection();
     const stream = await ensureLocalStream({ audio: true });
 
@@ -310,7 +381,7 @@ socket.on("offer", async (payload) => {
 
 socket.on("answer", async (payload) => {
   const answer = unwrapSignal(payload, "answer");
-  if (!pc) return;
+  if (!pc || !answer) return;
 
   try {
     await pc.setRemoteDescription(new RTCSessionDescription(answer));
@@ -339,6 +410,8 @@ socket.on("candidate", async (payload) => {
 function endCall() {
   closePeerConnection();
   els.remoteVideo.srcObject = null;
+  remoteStream = null;
+  setRemoteStatus("Remote: —");
 
   if (!localStream) return;
 

@@ -185,6 +185,12 @@ button:hover::after {
   opacity: 1;
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 input {
   outline: none;
   color: var(--text);

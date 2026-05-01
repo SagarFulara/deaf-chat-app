@@ -11,18 +11,25 @@ const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "*";
 const MAX_NAME_LENGTH = 30;
 const MAX_ROOM_LENGTH = 50;
 const MAX_TEXT_LENGTH = 300;
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_SOCKET_PAYLOAD = 24 * 1024 * 1024;
 
 const io = new Server(httpServer, {
   cors: {
     origin: CLIENT_ORIGIN
   },
-  maxHttpBufferSize: 2 * 1024 * 1024
+  maxHttpBufferSize: MAX_SOCKET_PAYLOAD
 });
 
 app.use(
   express.static(path.join(__dirname, "public"), {
     extensions: ["html"],
-    maxAge: "1h"
+    etag: false,
+    lastModified: false,
+    maxAge: 0,
+    setHeaders(res) {
+      res.setHeader("Cache-Control", "no-store");
+    }
   })
 );
 
@@ -53,6 +60,10 @@ function emitToRoom(socket, event, data, payload) {
 
   socket.to(room).emit(event, payload);
   return true;
+}
+
+function ack(ackFn, payload) {
+  if (typeof ackFn === "function") ackFn(payload);
 }
 
 io.on("connection", (socket) => {
@@ -120,19 +131,36 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("file", (data) => {
-    if (!isObject(data)) return;
+  socket.on("file", (data, ackFn) => {
+    if (!isObject(data)) {
+      ack(ackFn, { ok: false, error: "Invalid file data." });
+      return;
+    }
 
     const name = cleanText(data.name, 120);
+    const type = cleanText(data.type, 120);
+    const size = Number(data.size) || 0;
     const encryptedData = typeof data.data === "string" ? data.data : "";
 
-    if (!name || !encryptedData) return;
+    if (!name || !encryptedData) {
+      ack(ackFn, { ok: false, error: "Missing file name or data." });
+      return;
+    }
 
-    emitToRoom(socket, "file", data, {
+    if (size > MAX_FILE_BYTES) {
+      ack(ackFn, { ok: false, error: "File is too large." });
+      return;
+    }
+
+    const sent = emitToRoom(socket, "file", data, {
       name,
+      type,
+      size,
       data: encryptedData,
       sender: socket.data.username
     });
+
+    ack(ackFn, sent ? { ok: true } : { ok: false, error: "Join the room before sending a file." });
   });
 
   socket.on("disconnect", (reason) => {

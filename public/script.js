@@ -16,10 +16,26 @@ function decrypt(cipher) {
 }
 
 // ===== SOCKET =====
-const socket = io({
-  transports: ["websocket"],
-  reconnection: true
-});
+function createSocket() {
+  if (typeof io === "function") {
+    return io({
+      transports: ["websocket"],
+      reconnection: true
+    });
+  }
+
+  console.warn("Socket.IO was not loaded. Open http://localhost:3000 for full realtime features.");
+
+  return {
+    connected: false,
+    on() {},
+    emit(eventName) {
+      console.warn(`Preview mode: '${eventName}' was not sent because the server is not connected.`);
+    }
+  };
+}
+
+const socket = createSocket();
 
 // ===== STATE =====
 let name = "";
@@ -66,6 +82,7 @@ const els = {
 const ctx = els.canvas.getContext("2d");
 const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
 const ACTIVE_GESTURE_CLASS = "active-gesture";
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 const GESTURE_HIGHLIGHTS = [
   ["Hello", "g-hello"],
@@ -121,6 +138,28 @@ function addMsg(m) {
   els.messages.scrollTop = els.messages.scrollHeight;
 }
 
+function formatBytes(bytes = 0) {
+  if (!bytes) return "";
+
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+
+  return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function setFileButtonBusy(isBusy) {
+  if (!els.sendFileBtn) return;
+
+  els.sendFileBtn.disabled = isBusy;
+  els.sendFileBtn.textContent = isBusy ? "Sending..." : "📎 Send";
+}
+
 // ================= JOIN =================
 function join() {
   name = els.name.value.trim();
@@ -155,6 +194,10 @@ function sendMsg() {
 
 socket.on("chat-message", (d) => {
   addMsg(d.user + ": " + decrypt(d.msg));
+});
+
+socket.on("error-message", (message) => {
+  addMsg("Server: " + message);
 });
 
 // ================= VIDEO HELPERS =================
@@ -548,29 +591,88 @@ socket.on("gesture", (d) => {
 // ================= FILE =================
 function sendFile() {
   const f = els.file.files[0];
-  if (!f) return;
+  if (!f) {
+    addMsg("Choose a file first.");
+    return;
+  }
+
+  if (!room) {
+    addMsg("Join a room before sending a file.");
+    return;
+  }
+
+  if (!socket.connected) {
+    addMsg("File not sent: server is not connected. Open http://localhost:3000.");
+    return;
+  }
+
+  if (f.size > MAX_FILE_BYTES) {
+    addMsg(`File too large: ${formatBytes(f.size)}. Max allowed is ${formatBytes(MAX_FILE_BYTES)}.`);
+    return;
+  }
 
   const reader = new FileReader();
+  setFileButtonBusy(true);
 
   reader.onload = () => {
+    let encryptedData = "";
+
+    try {
+      encryptedData = encrypt(reader.result);
+    } catch (err) {
+      console.error("File encryption failed:", err);
+      addMsg("File not sent: encryption failed.");
+      setFileButtonBusy(false);
+      return;
+    }
+
+    let settled = false;
+    const timeoutId = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      setFileButtonBusy(false);
+      addMsg("File may not have sent: server did not confirm in time.");
+    }, 12000);
+
     socket.emit("file", {
       room,
       name: f.name,
-      data: encrypt(reader.result)
+      size: f.size,
+      type: f.type,
+      data: encryptedData
+    }, (res) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      setFileButtonBusy(false);
+
+      if (!res?.ok) {
+        addMsg("File not sent: " + (res?.error || "server rejected it."));
+        return;
+      }
+
+      addMsg(`You sent ${f.name} ${formatBytes(f.size) ? `(${formatBytes(f.size)})` : ""}`);
+      els.file.value = "";
     });
   };
 
-  reader.onerror = () => alert("Could not read that file.");
+  reader.onerror = () => {
+    setFileButtonBusy(false);
+    alert("Could not read that file.");
+  };
+
   reader.readAsDataURL(f);
 }
 
 socket.on("file", (d) => {
   const decryptedData = decrypt(d.data);
 
-  if (decryptedData === "Error") {
+  if (decryptedData === "Error" || !decryptedData.startsWith("data:")) {
     addMsg("Could not decrypt file: " + d.name);
     return;
   }
+
+  addMsg(`${d.sender || "User"} sent ${d.name} ${formatBytes(d.size) ? `(${formatBytes(d.size)})` : ""}`);
 
   const a = document.createElement("a");
   a.href = decryptedData;

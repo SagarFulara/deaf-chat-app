@@ -17,12 +17,8 @@
 <!-- LOGIN -->
 <div id="login">
   <div class="login-card">
-
-    <!-- THEME TOGGLE (LOGIN TOP RIGHT) -->
     <div class="login-top">
-      <button id="themeToggleLogin" class="theme-pill small">
-        🌙 <span>Dark</span>
-      </button>
+      <button id="themeToggleLogin" class="theme-pill small">🌙</button>
     </div>
 
     <div class="login-logo">🤟</div>
@@ -31,7 +27,6 @@
 
     <input id="name" placeholder="Your name">
     <input id="room" placeholder="Room code">
-
     <button onclick="join()">Enter Room →</button>
   </div>
 </div>
@@ -41,45 +36,79 @@
 
   <!-- HEADER -->
   <div class="app-header">
-
     <div class="brand">🤟 Deaf Chat</div>
+    <button id="themeToggle">🌙</button>
+  </div>
 
-    <div class="header-right">
-      <div class="status-dot">
-        <div class="dot"></div>
-        <span id="roomLabel">Connected</span>
+  <!-- 🔥 SIDE LAYOUT -->
+  <div class="main-layout">
+
+    <!-- LEFT SIDE (VIDEOS) -->
+    <div class="left-panel">
+
+      <div class="videos">
+        <div class="video-box">
+          <span class="video-label">YOU</span>
+          <video id="localVideo" autoplay muted playsinline></video>
+          <canvas id="canvas"></canvas>
+          <p id="myGesture">Your Gesture: —</p>
+        </div>
+
+        <div class="video-box">
+          <span class="video-label">REMOTE</span>
+          <video id="remoteVideo" autoplay playsinline></video>
+          <p id="remoteGesture">Remote: —</p>
+        </div>
       </div>
 
-      <!-- THEME TOGGLE -->
-      <button id="themeToggle" class="theme-pill">
-        🌙 <span>Dark</span>
-      </button>
+      <!-- CONTROLS -->
+      <div class="controls">
+        <button class="btn-start" onclick="startCall()">🎥 Start</button>
+        <button class="btn-end" onclick="endCall()">❌ End</button>
+        <button class="btn-start" onclick="startGesture()">🤟 Gesture</button>
+        <button class="btn-end" onclick="stopGesture()">🛑 Stop</button>
+      </div>
+
     </div>
 
-  </div>
+    <!-- RIGHT SIDE (INSTRUCTIONS) -->
+    <div id="instructionBox">
+      <h3>🖐️ All Gestures</h3>
+      <ul>
+        <li id="g-hello">✋ Hello</li>
+        <li id="g-yes">👍 Yes</li>
+        <li id="g-no">👎 No</li>
+        <li id="g-peace">✌️ Peace</li>
+        <li id="g-point">☝️ Point</li>
+        <li id="g-fist">✊ Fist</li>
 
-  <!-- VIDEOS -->
-  <div class="videos">
-    <div class="video-box">
-      <span class="video-label">YOU</span>
-      <video id="localVideo" autoplay muted playsinline></video>
-      <canvas id="canvas"></canvas>
-      <p id="myGesture">Your Gesture: —</p>
+        <li id="g-four">🖐️ Four</li>
+        <li id="g-three">3️⃣ Three</li>
+        <li id="g-two">✌️ Two</li>
+        <li id="g-one">☝️ One</li>
+
+        <li id="g-rock">🤘 Rock</li>
+        <li id="g-ily">🤟 ILY</li>
+        <li id="g-call">🤙 Call</li>
+        <li id="g-gun">🔫 Gun</li>
+
+        <li id="g-ok">👌 OK</li>
+        <li id="g-pinchM">🤏 Pinch M</li>
+        <li id="g-pinchR">🤏 Pinch R</li>
+        <li id="g-pinchP">🤏 Pinch P</li>
+
+        <li id="g-disagree">❌ Disagree</li>
+        <li id="g-cool">😎 Cool</li>
+        <li id="g-partial">✋ Partial</li>
+
+        <li id="g-swipeR">➡️ Swipe Right</li>
+        <li id="g-swipeL">⬅️ Swipe Left</li>
+        <li id="g-push">👊 Push</li>
+        <li id="g-pull">🤚 Pull</li>
+        <li id="g-wave">👋 Wave</li>
+      </ul>
     </div>
 
-    <div class="video-box">
-      <span class="video-label">REMOTE</span>
-      <video id="remoteVideo" autoplay playsinline></video>
-      <p id="remoteGesture">Remote: —</p>
-    </div>
-  </div>
-
-  <!-- CONTROLS -->
-  <div class="controls">
-    <button class="btn-start" onclick="startCall()">🎥 Start Call</button>
-    <button class="btn-end" onclick="endCall()">❌ End Call</button>
-    <button class="btn-start" onclick="startGesture()">🤟 Start Gesture</button>
-    <button class="btn-end" onclick="stopGesture()">🛑 Stop Gesture</button>
   </div>
 
   <!-- CHAT -->
@@ -89,7 +118,7 @@
 
     <div class="chat-input">
       <input id="msg" placeholder="Type a message..."
-             onkeydown="if(event.key==='Enter') sendMsg()">
+        onkeydown="if(event.key==='Enter') sendMsg()">
       <button onclick="sendMsg()">Send</button>
     </div>
 

@@ -141,46 +141,6 @@ let lastGesture = "";
 let stableCount = 0;
 let finalGesture = "Detecting... 👀";
 
-// ================= MOTION GLOBAL =================
-let handHistory = [];
-const HISTORY_SIZE = 10;
-
-// ================= MOTION FUNCTION =================
-function detectMotion(l) {
-  const wrist = l[0];
-
-  handHistory.push({ x: wrist.x, y: wrist.y, z: wrist.z });
-  if (handHistory.length > HISTORY_SIZE) handHistory.shift();
-
-  if (handHistory.length < HISTORY_SIZE) return null;
-
-  const first = handHistory[0];
-  const last  = handHistory[handHistory.length - 1];
-
-  const dx = last.x - first.x;
-  const dy = last.y - first.y;
-  const dz = last.z - first.z;
-
-  const TH = 0.08;
-
-  if (dx > TH && Math.abs(dy) < 0.05) return "Swipe Right ➡️";
-  if (dx < -TH && Math.abs(dy) < 0.05) return "Swipe Left ⬅️";
-  if (dz < -TH) return "Push 👊";
-  if (dz > TH) return "Pull 🤚";
-
-  // wave
-  let changes = 0;
-  for (let i = 2; i < handHistory.length; i++) {
-    const prev = handHistory[i-1].x - handHistory[i-2].x;
-    const curr = handHistory[i].x - handHistory[i-1].x;
-    if (prev * curr < 0) changes++;
-  }
-
-  if (changes >= 3) return "Wave 👋";
-
-  return null;
-}
-
 
 // ================= GESTURE - RESULTS HANDLER =================
 function onHandResults(res) {
@@ -304,15 +264,10 @@ function onHandResults(res) {
     finalGesture = detected;
   }
 
-  // ================= MOTION ADD =================
-  const motionGesture = detectMotion(l);
 
   let finalOutput = finalGesture;
 
-  // 👉 motion override
-  if (motionGesture) {
-    finalOutput = motionGesture;
-  }
+  
 
   // ================= OUTPUT =================
   document.getElementById("myGesture").innerText = finalOutput;
@@ -347,12 +302,6 @@ if (finalOutput.includes("Disagree")) document.getElementById("g-disagree")?.cla
 if (finalOutput.includes("Cool")) document.getElementById("g-cool")?.classList.add("active-gesture");
 if (finalOutput.includes("Partial")) document.getElementById("g-partial")?.classList.add("active-gesture");
 
-// ===== MOTION =====
-if (finalOutput.includes("Right")) document.getElementById("g-swipeR")?.classList.add("active-gesture");
-if (finalOutput.includes("Left")) document.getElementById("g-swipeL")?.classList.add("active-gesture");
-if (finalOutput.includes("Push")) document.getElementById("g-push")?.classList.add("active-gesture");
-if (finalOutput.includes("Pull")) document.getElementById("g-pull")?.classList.add("active-gesture");
-if (finalOutput.includes("Wave")) document.getElementById("g-wave")?.classList.add("active-gesture");
 
   if (
     finalOutput !== "Detecting... 👀" &&

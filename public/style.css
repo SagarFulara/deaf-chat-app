@@ -742,3 +742,55 @@ button:hover::after {
     max-width: 100%;
   }
 }
+/* ===== FIX CHAT + FILE ALIGNMENT (NO SHIFT) ===== */
+
+#chat {
+  width: 100%;
+  max-width: 570px;
+  margin: 0; /* पहले auto था → shift कर रहा था */
+}
+
+/* Left panel ko vertical stack fix */
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Ensure chat stays under controls */
+.controls + #chat {
+  margin-top: 6px;
+}
+
+/* Fix message + file width consistency */
+.chat-input,
+.file-input {
+  width: 100%;
+}
+
+/* Prevent layout jump */
+#messages {
+  min-height: 195px; /* fixed height already, but enforce */
+}
+
+/* Side box ko top se lock */
+#instructionBox {
+  position: sticky;
+  top: 80px;
+}
+
+/* Ensure both panels align top */
+.main-layout {
+  align-items: flex-start;
+}
+
+/* MOBILE FIX */
+@media (max-width: 900px) {
+  #chat {
+    margin: 0 auto; /* mobile pe center */
+  }
+
+  #instructionBox {
+    position: static;
+  }
+}

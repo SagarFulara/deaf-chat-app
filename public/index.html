@@ -40,12 +40,13 @@
     <button id="themeToggle">🌙</button>
   </div>
 
-  <!-- 🔥 SIDE LAYOUT -->
+  <!-- MAIN LAYOUT -->
   <div class="main-layout">
 
-    <!-- LEFT SIDE (VIDEOS) -->
+    <!-- LEFT PANEL -->
     <div class="left-panel">
 
+      <!-- VIDEOS -->
       <div class="videos">
         <div class="video-box">
           <span class="video-label">YOU</span>
@@ -69,9 +70,27 @@
         <button class="btn-end" onclick="stopGesture()">🛑 Stop</button>
       </div>
 
+      <!-- ✅ CHAT (FIXED POSITION) -->
+      <div id="chat">
+        <div class="chat-header">💬 Messages</div>
+
+        <div id="messages"></div>
+
+        <div class="chat-input">
+          <input id="msg" placeholder="Type a message..."
+            onkeydown="if(event.key==='Enter') sendMsg()">
+          <button onclick="sendMsg()">Send</button>
+        </div>
+
+        <div class="file-input">
+          <input type="file" id="file">
+          <button onclick="sendFile()">📎 Send</button>
+        </div>
+      </div>
+
     </div>
 
-    <!-- RIGHT SIDE (INSTRUCTIONS) -->
+    <!-- RIGHT PANEL -->
     <div id="instructionBox">
       <h3>🖐️ All Gestures</h3>
       <ul>
@@ -100,32 +119,9 @@
         <li id="g-disagree">❌ Disagree</li>
         <li id="g-cool">😎 Cool</li>
         <li id="g-partial">✋ Partial</li>
-
-        <li id="g-swipeR">➡️ Swipe Right</li>
-        <li id="g-swipeL">⬅️ Swipe Left</li>
-        <li id="g-push">👊 Push</li>
-        <li id="g-pull">🤚 Pull</li>
-        <li id="g-wave">👋 Wave</li>
       </ul>
     </div>
 
-  </div>
-
-  <!-- CHAT -->
-  <div id="chat">
-    <div class="chat-header">💬 Messages</div>
-    <div id="messages"></div>
-
-    <div class="chat-input">
-      <input id="msg" placeholder="Type a message..."
-        onkeydown="if(event.key==='Enter') sendMsg()">
-      <button onclick="sendMsg()">Send</button>
-    </div>
-
-    <div class="file-input">
-      <input type="file" id="file">
-      <button onclick="sendFile()">📎 Send</button>
-    </div>
   </div>
 
 </div>

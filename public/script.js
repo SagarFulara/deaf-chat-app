@@ -83,12 +83,21 @@ const GESTURE_HIGHLIGHTS = [
   ["Call", "g-call"],
   ["Gun", "g-gun"],
   ["OK", "g-ok"],
-  ["Pinch Middle", "g-pinchM"],
-  ["Pinch Ring", "g-pinchR"],
-  ["Pinch Pinky", "g-pinchP"],
-  ["Disagree", "g-disagree"],
-  ["Cool", "g-cool"],
-  ["Partial", "g-partial"]
+  ["Thank You", "g-thanks"],
+  ["Need Help", "g-help"],
+  ["Please Wait", "g-wait"],
+  ["Repeat Please", "g-repeat"],
+  ["I Am Fine", "g-fine"],
+  ["Goodbye", "g-bye"],
+  ["Sorry", "g-sorry"],
+  ["Welcome", "g-welcome"],
+  ["Water Please", "g-water"],
+  ["Emergency", "g-emergency"],
+  ["I Don't Understand", "g-understand"],
+  ["Good Morning", "g-morning"],
+  ["Good Night", "g-night"],
+  ["Are You Okay", "g-okay"],
+  ["Call Later", "g-call-later"]
 ];
 
 let instructionItems = [];
@@ -442,12 +451,21 @@ function onHandResults(res) {
   if (indexUp && middleUp && !ringUp && !pinkyUp) check("Two ✌️", 6);
   if (indexUp && middleDown && ringDown && pinkyDown) check("One ☝️", 6);
 
-  if (thumbDown && indexUp) check("Disagree ❌", 5);
-  if (thumbUp && middleUp && !indexUp) check("Cool 😎", 5);
-  if (indexDown && middleDown && ringUp && pinkyUp) check("Partial Open", 5);
-  if (dist(4, 12) < 0.05) check("Pinch Middle 🤏", 5);
-  if (dist(4, 16) < 0.05) check("Pinch Ring 🤏", 5);
-  if (dist(4, 20) < 0.05) check("Pinch Pinky 🤏", 5);
+  if (dist(4, 12) < 0.05) check("Thank You 🙏", 5);
+  if (dist(4, 16) < 0.05) check("Need Help 🆘", 5);
+  if (dist(4, 20) < 0.05) check("Please Wait ⏳", 5);
+  if (thumbDown && indexUp) check("Repeat Please 🔁", 5);
+  if (thumbUp && middleUp && !indexUp) check("I Am Fine ✅", 5);
+  if (indexDown && middleDown && ringUp && pinkyUp) check("Goodbye 👋", 5);
+  if (thumbDown && pinkyUp && indexDown && middleDown && ringDown) check("Sorry 🙏", 6);
+  if (middleUp && ringUp && indexDown && pinkyDown) check("Welcome 😊", 6);
+  if (thumbUp && ringUp && indexDown && middleDown && pinkyDown) check("Water Please 💧", 6);
+  if (thumbUp && ringUp && pinkyUp && indexDown && middleDown) check("Emergency 🚨", 7);
+  if (thumbDown && indexUp && middleUp && ringDown && pinkyDown) check("I Don't Understand ❓", 8);
+  if (thumbUp && indexUp && middleUp && ringDown && pinkyDown) check("Good Morning 🌅", 8);
+  if (thumbDown && indexUp && middleUp && ringUp && pinkyDown) check("Good Night 🌙", 8);
+  if (indexUp && ringUp && middleDown && pinkyDown) check("Are You Okay? ❔", 6);
+  if (thumbDown && middleUp && pinkyUp && indexDown && ringDown) check("Call Later 📞", 6);
 
   if (best.name === lastGesture) {
     stableCount++;

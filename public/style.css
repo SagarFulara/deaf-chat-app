@@ -732,8 +732,10 @@ body.light #messages p,
 #instructionBox {
   position: sticky;
   top: 80px;
-  flex: 0 0 260px;
-  max-width: 260px;
+  flex: 0 0 310px;
+  max-height: calc(100vh - 110px);
+  max-width: 310px;
+  overflow-y: auto;
   padding: 15px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -756,7 +758,7 @@ body.light #messages p,
 
 #instructionBox li {
   margin-bottom: 5px;
-  padding: 6px 8px;
+  padding: 8px 9px;
   border-radius: 6px;
   font-size: 13px;
   transition: background var(--fast), color var(--fast), font-weight var(--fast);
@@ -766,10 +768,33 @@ body.light #messages p,
   background: var(--accent-dim);
 }
 
+.gesture-main,
+.gesture-hint {
+  display: block;
+}
+
+.gesture-main {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.gesture-hint {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
 .active-gesture {
   color: var(--bg-deep);
   font-weight: 600;
   background: var(--accent-mid);
+}
+
+.active-gesture .gesture-main,
+.active-gesture .gesture-hint {
+  color: var(--bg-deep);
 }
 
 @media (max-width: 900px) {

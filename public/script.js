@@ -136,8 +136,12 @@ function initHands() {
 }
 
 // ================= GESTURE - RESULTS HANDLER =================
+let lastGestureTime = 0;
+let lastGesture = "";
+let stableCount = 0;
+let finalGesture = "Detecting... 👀";
+
 function onHandResults(res) {
-  // Sync canvas size to actual video every frame
   if (localVideo.videoWidth > 0) {
     canvas.width  = localVideo.videoWidth;
     canvas.height = localVideo.videoHeight;
@@ -155,37 +159,121 @@ function onHandResults(res) {
   drawConnectors(ctx, l, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 3 });
   drawLandmarks(ctx, l, { color: "#FF0000", lineWidth: 2, radius: 4 });
 
-  // Gesture detection
-  const allFingersUp =
-    l[8].y  < l[6].y  &&
-    l[12].y < l[10].y &&
-    l[16].y < l[14].y &&
-    l[20].y < l[18].y;
+  // ================= HELPERS =================
+  const TH = 0.02;
 
-  const thumbUp   = l[4].y < l[3].y && l[4].y < l[2].y;
-  const thumbDown = l[4].y > l[3].y && l[4].y > l[2].y;
-  const indexUp   = l[8].y < l[6].y;
-  const middleUp  = l[12].y < l[10].y;
-  const ringDown  = l[16].y > l[14].y;
-  const pinkyDown = l[20].y > l[18].y;
+  const thumbUp    = l[4].y < l[3].y - TH;
+  const thumbDown  = l[4].y > l[3].y + TH;
 
-  let text = "Detecting... 👀";
+  const indexUp    = l[8].y < l[6].y - TH;
+  const middleUp   = l[12].y < l[10].y - TH;
+  const ringUp     = l[16].y < l[14].y - TH;
+  const pinkyUp    = l[20].y < l[18].y - TH;
 
-  if (allFingersUp)                                           text = "Hello ✋";
-  else if (thumbUp && !indexUp)                              text = "Yes 👍";
-  else if (thumbDown && !indexUp)                            text = "No 👎";
-  else if (indexUp && middleUp && ringDown && pinkyDown)     text = "Peace ✌️";
-  else if (indexUp && !middleUp && ringDown && pinkyDown)    text = "Pointing ☝️";
-  else if (!indexUp && !middleUp && !ringDown && !pinkyDown) text = "Fist ✊";
+  const indexDown  = !indexUp;
+  const middleDown = !middleUp;
+  const ringDown   = !ringUp;
+  const pinkyDown  = !pinkyUp;
 
-  document.getElementById("myGesture").innerText = text;
+  const dist = (a, b) => Math.hypot(l[a].x - l[b].x, l[a].y - l[b].y);
 
-  if (text !== "Detecting... 👀") {
-    socket.emit("gesture", { room, text });
+  // ================= SCORE SYSTEM =================
+  let best = { name: "Detecting... 👀", score: 0 };
+
+  function check(name, score) {
+    if (score > best.score) {
+      best = { name, score };
+    }
   }
-}
 
-// ================= GESTURE - START =================
+  // ================= HIGH CONFIDENCE =================
+  if (dist(4,8) < 0.05) check("OK 👌", 10);
+
+  if (thumbUp && indexUp && pinkyUp && middleDown && ringDown)
+    check("I Love You 🤟", 9);
+
+  if (indexUp && pinkyUp && middleDown && ringDown)
+    check("Rock 🤘", 8);
+
+  if (thumbUp && pinkyUp && indexDown && middleDown && ringDown)
+    check("Call Me 🤙", 8);
+
+  if (thumbUp && indexUp && middleDown && ringDown && pinkyDown)
+    check("Gun 🔫", 8);
+
+  // ================= ORIGINAL CORE =================
+  if (indexUp && middleUp && ringUp && pinkyUp)
+    check("Hello ✋", 7);
+
+  if (thumbUp && indexDown && middleDown && ringDown && pinkyDown)
+    check("Yes 👍", 7);
+
+  if (thumbDown && indexDown && middleDown && ringDown && pinkyDown)
+    check("No 👎", 7);
+
+  if (indexUp && middleUp && ringDown && pinkyDown)
+    check("Peace ✌️", 7);
+
+  if (indexUp && middleDown && ringDown && pinkyDown)
+    check("Pointing ☝️", 6);
+
+  if (indexDown && middleDown && ringDown && pinkyDown)
+    check("Fist ✊", 6);
+
+  // ================= COUNTING =================
+  if (indexUp && middleUp && ringUp && pinkyUp && !thumbUp)
+    check("Four ✋", 6);
+
+  if (indexUp && middleUp && ringUp && !pinkyUp)
+    check("Three 3️⃣", 6);
+
+  if (indexUp && middleUp && !ringUp && !pinkyUp)
+    check("Two ✌️", 6);
+
+  if (indexUp && middleDown && ringDown && pinkyDown)
+    check("One ☝️", 6);
+
+  // ================= EXTRA =================
+  if (thumbDown && indexUp)
+    check("Disagree ❌", 5);
+
+  if (thumbUp && middleUp && !indexUp)
+    check("Cool 😎", 5);
+
+  if (indexDown && middleDown && ringUp && pinkyUp)
+    check("Partial Open", 5);
+
+  if (dist(4,12) < 0.05) check("Pinch Middle 🤏", 5);
+  if (dist(4,16) < 0.05) check("Pinch Ring 🤏", 5);
+  if (dist(4,20) < 0.05) check("Pinch Pinky 🤏", 5);
+
+  // ================= STABILITY =================
+  let detected = best.name;
+
+  if (detected === lastGesture) {
+    stableCount++;
+  } else {
+    stableCount = 0;
+  }
+
+  lastGesture = detected;
+
+  if (stableCount > 3) {
+    finalGesture = detected;
+  }
+
+  // ================= OUTPUT =================
+  document.getElementById("myGesture").innerText = finalGesture;
+
+  // debounce socket
+  if (
+    finalGesture !== "Detecting... 👀" &&
+    Date.now() - lastGestureTime > 800
+  ) {
+    socket.emit("gesture", { room, text: finalGesture });
+    lastGestureTime = Date.now();
+  }
+}// ================= GESTURE - START =================
 async function startGesture() {
   if (isGestureRunning) return;
 

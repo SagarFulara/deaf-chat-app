@@ -309,6 +309,7 @@ function createPeerConnection(targetPeerId = peerId) {
   els.remoteVideo.srcObject = remoteStream;
 
   pc.ontrack = (e) => {
+     console.log("TRACK RECEIVED", e.streams);
     e.streams[0]?.getTracks().forEach((track) => {
       if (!remoteStream.getTracks().some((existingTrack) => existingTrack.id === track.id)) {
         remoteStream.addTrack(track);

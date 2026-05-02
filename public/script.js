@@ -318,22 +318,40 @@ function setRemoteStatus(text) {
 }
 
 async function playRemoteVideo() {
-  if (!els.remoteVideo.srcObject) return;
-  els.remoteVideo.autoplay = true;
-  els.remoteVideo.playsInline = true;
+  const video = els.remoteVideo;
+  if (!video || !video.srcObject) return;
+
+  video.autoplay = true;
+  video.playsInline = true;
+  video.muted = false;
+
+  // Tracks ready hone ka wait karo
+  const stream = video.srcObject;
+  if (stream.getTracks().length === 0) {
+    stream.addEventListener("addtrack", () => playRemoteVideo(), { once: true });
+    return;
+  }
+
   try {
-    await els.remoteVideo.play();
+    await video.play();
+    console.log("Remote video playing OK");
   } catch (err) {
-    console.warn("Autoplay blocked, waiting for user click...");
-    if (!window._videoClickBound) {
-      window._videoClickBound = true;
-      document.body.addEventListener("click", async () => {
-        try {
-          await els.remoteVideo.play();
-        } catch (e) {
-          console.log("Play failed:", e);
-        }
-      }, { once: true });
+    console.warn("Autoplay blocked:", err.name);
+    // Muted se try karo — browser muted video allow karta hai
+    video.muted = true;
+    try {
+      await video.play();
+      console.log("Remote video playing (muted fallback)");
+      // User interaction ke baad unmute karo
+      if (!window._unmuteOnClick) {
+        window._unmuteOnClick = true;
+        document.body.addEventListener("click", () => {
+          video.muted = false;
+          console.log("Unmuted remote video");
+        }, { once: true });
+      }
+    } catch (e2) {
+      console.error("Remote video play totally failed:", e2);
     }
   }
 }

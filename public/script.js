@@ -258,10 +258,23 @@ async function ensureLocalStream({ audio = false } = {}) {
 
   if (!localStream || !hasLiveVideo) {
     localStream?.getTracks().forEach((track) => track.stop());
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio });
+
+    // Pehle video+audio try karo, fail hone pe sirf video
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio });
+    } catch (err) {
+      console.warn("Audio+video failed, trying video only:", err);
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      addMsg("Microphone access denied — call will continue without audio.");
+    }
   } else if (audio && !hasLiveAudio) {
-    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    audioStream.getAudioTracks().forEach((track) => localStream.addTrack(track));
+    try {
+      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      audioStream.getAudioTracks().forEach((track) => localStream.addTrack(track));
+    } catch (err) {
+      console.warn("Could not add audio track:", err);
+      addMsg("Microphone access denied — call will continue without audio.");
+    }
   }
 
   els.localVideo.srcObject = localStream;
@@ -435,7 +448,7 @@ async function startCall() {
     }
   } catch (err) {
     console.error("Call start failed:", err);
-    alert("Could not start the call. Please allow camera and microphone access.");
+    addMsg("Could not start the call: " + (err?.message || "unknown error"));
     isCallStarted = false;
     closePeerConnection();
   }

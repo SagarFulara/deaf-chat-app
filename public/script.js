@@ -87,7 +87,28 @@ const els = {
 const ctx = els.canvas.getContext("2d");
 const ICE_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" }
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun.relay.metered.ca:80" },
+  {
+    urls: "turn:global.relay.metered.ca:80",
+    username: "openrelayproject",
+    credential: "openrelayproject"
+  },
+  {
+    urls: "turn:global.relay.metered.ca:80?transport=tcp",
+    username: "openrelayproject",
+    credential: "openrelayproject"
+  },
+  {
+    urls: "turn:global.relay.metered.ca:443",
+    username: "openrelayproject",
+    credential: "openrelayproject"
+  },
+  {
+    urls: "turn:global.relay.metered.ca:443?transport=tcp",
+    username: "openrelayproject",
+    credential: "openrelayproject"
+  }
 ];
 const ACTIVE_GESTURE_CLASS = "active-gesture";
 const MAX_FILE_BYTES = 8 * 1024 * 1024;

@@ -134,7 +134,6 @@ function setText(el, text) {
 
 function setDisplay(el, value) {
   if (!el) return;
-
   el.hidden = value === "none";
   el.style.display = value;
 }
@@ -148,22 +147,18 @@ function addMsg(m) {
 
 function formatBytes(bytes = 0) {
   if (!bytes) return "";
-
   const units = ["B", "KB", "MB", "GB"];
   let size = bytes;
   let unitIndex = 0;
-
   while (size >= 1024 && unitIndex < units.length - 1) {
     size /= 1024;
     unitIndex++;
   }
-
   return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
 function setFileButtonBusy(isBusy) {
   if (!els.sendFileBtn) return;
-
   els.sendFileBtn.disabled = isBusy;
   els.sendFileBtn.textContent = isBusy ? "Sending..." : "📎 Send";
 }
@@ -215,11 +210,13 @@ socket.on("socket-id", (id) => {
   ownSocketId = id || "";
 });
 
+// ===== FIX 3: peerReadyForCall = true added =====
 socket.on("room-peers", (data) => {
   const peers = Array.isArray(data?.peers) ? data.peers : [];
 
   if (peers.length > 0) {
     peerId = peers[0].id;
+    peerReadyForCall = true; // FIX: peer already present hai toh ready consider karo
     addMsg(`${peers[0].username || "User"} is already in this room. Press Start to call.`);
   } else {
     addMsg("Room joined. Waiting for another user...");
@@ -273,7 +270,6 @@ async function ensureLocalStream({ audio = false } = {}) {
 
 function closePeerConnection() {
   if (!pc) return;
-
   pc.ontrack = null;
   pc.onicecandidate = null;
   pc.onconnectionstatechange = null;
@@ -289,28 +285,25 @@ function setRemoteStatus(text) {
 
 async function playRemoteVideo() {
   if (!els.remoteVideo.srcObject) return;
-
   els.remoteVideo.autoplay = true;
   els.remoteVideo.playsInline = true;
-try {
-  await els.remoteVideo.play();
-} catch (err) {
-  console.warn("Autoplay blocked, waiting for user click...");
-
-  // 👇 Multiple listeners add hone se bachane ke liye guard
-  if (!window._videoClickBound) {
-    window._videoClickBound = true;
-
-    document.body.addEventListener("click", async () => {
-      try {
-        await els.remoteVideo.play();
-      } catch (e) {
-        console.log("Play failed:", e);
-      }
-    }, { once: true });
+  try {
+    await els.remoteVideo.play();
+  } catch (err) {
+    console.warn("Autoplay blocked, waiting for user click...");
+    if (!window._videoClickBound) {
+      window._videoClickBound = true;
+      document.body.addEventListener("click", async () => {
+        try {
+          await els.remoteVideo.play();
+        } catch (e) {
+          console.log("Play failed:", e);
+        }
+      }, { once: true });
+    }
   }
 }
-}
+
 function createPeerConnection(targetPeerId = peerId) {
   closePeerConnection();
   peerId = targetPeerId || peerId;
@@ -319,18 +312,12 @@ function createPeerConnection(targetPeerId = peerId) {
   remoteStream = new MediaStream();
   els.remoteVideo.srcObject = remoteStream;
 
+  // ===== FIX 1: ontrack — sirf ek baar track add karo =====
   pc.ontrack = (e) => {
-     console.log("TRACK RECEIVED", e.streams);
-    e.streams[0]?.getTracks().forEach((track) => {
-      if (!remoteStream.getTracks().some((existingTrack) => existingTrack.id === track.id)) {
-        remoteStream.addTrack(track);
-      }
-    });
-
-    if (!remoteStream.getTracks().some((track) => track.id === e.track.id)) {
+    console.log("TRACK RECEIVED", e.track.kind);
+    if (!remoteStream.getTracks().some((t) => t.id === e.track.id)) {
       remoteStream.addTrack(e.track);
     }
-
     setRemoteStatus("Remote connected");
     playRemoteVideo();
   };
@@ -343,12 +330,11 @@ function createPeerConnection(targetPeerId = peerId) {
 
   pc.onconnectionstatechange = () => {
     if (!pc) return;
-
+    console.log("Connection state:", pc.connectionState);
     if (pc.connectionState === "connected") {
       setRemoteStatus("Remote connected");
       playRemoteVideo();
     }
-
     if (["failed", "disconnected"].includes(pc.connectionState)) {
       setRemoteStatus("Remote connection issue. Try End, then Start again.");
     }
@@ -356,7 +342,7 @@ function createPeerConnection(targetPeerId = peerId) {
 
   pc.oniceconnectionstatechange = () => {
     if (!pc) return;
-
+    console.log("ICE state:", pc.iceConnectionState);
     if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
       setRemoteStatus("Remote connected");
       playRemoteVideo();
@@ -372,10 +358,8 @@ function addLocalTracks(peer, stream) {
 
 async function flushPendingCandidates() {
   if (!pc?.remoteDescription) return;
-
   const candidates = pendingCandidates;
   pendingCandidates = [];
-
   for (const candidate of candidates) {
     try {
       await pc.addIceCandidate(new RTCIceCandidate(candidate));
@@ -390,9 +374,10 @@ function unwrapSignal(payload, key) {
 }
 
 // ================= VIDEO CALL =================
+// ===== FIX 2: shouldCreateOffer — < use karo taaki sirf ek peer offer kare =====
 function shouldCreateOffer(targetPeerId) {
   if (!ownSocketId || !targetPeerId) return true;
-  return ownSocketId > targetPeerId;
+  return ownSocketId < targetPeerId;
 }
 
 async function callPeer(targetPeerId) {
@@ -608,12 +593,10 @@ function waitForVideoReady(timeoutMs = 7000) {
         resolve();
         return;
       }
-
       if (Date.now() - startedAt > timeoutMs) {
         reject(new Error("Video did not become ready in time."));
         return;
       }
-
       setTimeout(check, 100);
     }
 

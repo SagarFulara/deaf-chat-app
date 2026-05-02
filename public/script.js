@@ -290,16 +290,27 @@ function setRemoteStatus(text) {
 async function playRemoteVideo() {
   if (!els.remoteVideo.srcObject) return;
 
-  try {
-    els.remoteVideo.autoplay = true;
-    els.remoteVideo.playsInline = true;
-    await els.remoteVideo.play();
-  } catch (err) {
-    console.warn("Remote video autoplay blocked:", err);
-    setRemoteStatus("Remote video ready. Click/tap page if it does not play.");
+  els.remoteVideo.autoplay = true;
+  els.remoteVideo.playsInline = true;
+try {
+  await els.remoteVideo.play();
+} catch (err) {
+  console.warn("Autoplay blocked, waiting for user click...");
+
+  // 👇 Multiple listeners add hone se bachane ke liye guard
+  if (!window._videoClickBound) {
+    window._videoClickBound = true;
+
+    document.body.addEventListener("click", async () => {
+      try {
+        await els.remoteVideo.play();
+      } catch (e) {
+        console.log("Play failed:", e);
+      }
+    }, { once: true });
   }
 }
-
+}
 function createPeerConnection(targetPeerId = peerId) {
   closePeerConnection();
   peerId = targetPeerId || peerId;
